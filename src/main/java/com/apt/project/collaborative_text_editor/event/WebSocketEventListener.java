@@ -1,5 +1,38 @@
  package com.apt.project.collaborative_text_editor.event;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.context.event.EventListener;
+ import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+ import org.springframework.stereotype.Component;
+ import org.springframework.web.socket.messaging.SessionConnectedEvent;
+ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+ import java.util.UUID;
 
+// @Component
+// @Slf4j
+// @RequiredArgsConstructor
+// public class WebSocketEventListener {
+
+//     private final SimpMessageSendingOperations messagingTemplate;
+//     public WebSocketEventListener(SimpMessagingTemplate messagingTemplate) {
+//         this.messagingTemplate = messagingTemplate;
+//     }
+//     @EventListener
+//     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
+//         String sessionId = event.getMessage().getHeaders().get("simpSessionId").toString();
+//         String uniqueId = UUID.randomUUID().toString();
+
+//         // messagingTemplate.convertAndSendToUser(
+//         //     sessionId, // Target the specific session
+//         //     "/user/queue/unique-id", // Destination queue for the client
+//         //     sessionId // Payload (the unique ID)
+//         // );
+//         System.out.println("Received a new web socket connection");
+//         System.out.println(sessionId);
+//     }
+// }
 // import java.util.concurrent.ConcurrentHashMap;
 // import org.springframework.context.event.EventListener;
 // import org.springframework.stereotype.Component;
