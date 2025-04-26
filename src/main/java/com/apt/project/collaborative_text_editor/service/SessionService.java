@@ -6,6 +6,8 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.apt.project.collaborative_text_editor.Utility;
+import com.apt.project.collaborative_text_editor.model.Message;
+import com.apt.project.collaborative_text_editor.model.Operation;
 import com.apt.project.collaborative_text_editor.model.Session;
 
 public class SessionService {
@@ -15,11 +17,11 @@ public class SessionService {
     //REMOVE THIS
     String lastSession;
     public String createSession(String userId) throws Exception{
-        String sessionId=new Utility().generateUniqueId();
-        Session session=new Session(sessionId, "", new Vector<String>(), new Vector<String>());
+        Session session=new Session();
+        String sessionId=session.getId();
         session.addEditor(userId);
         activeSessions.put(sessionId, session);
-        lastSession=sessionId;
+        lastSession=sessionId; // REMOVE
         return sessionId;
     }
 
@@ -27,6 +29,15 @@ public class SessionService {
         Session session=activeSessions.get(lastSession);
         session.addEditor(userId);
         return lastSession;
+    }
+
+    public Message editDocument(Operation op, String sessionId) throws Exception{
+        Session session=activeSessions.get(sessionId);
+        session.edit(op);
+        Message message=Message.builder()
+        .content(session.getDocumentContent())
+        .characterIds(session.getCharacterIds()).build();
+        return message;
     }
 
 }

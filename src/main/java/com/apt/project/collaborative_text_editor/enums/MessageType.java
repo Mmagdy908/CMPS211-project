@@ -4,6 +4,7 @@ public enum MessageType {
     REGISTER,
     CREATE, 
     JOIN, 
+    UPDATE,
     LEAVE,
     ERROR
 }

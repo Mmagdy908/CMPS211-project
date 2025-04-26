@@ -14,6 +14,7 @@ public class CollaborativeTextEditorApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(CollaborativeTextEditorApplication.class, args);
+  
 	}
 
 }
