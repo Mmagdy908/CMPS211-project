@@ -4,13 +4,16 @@ import java.util.List;
 import java.util.Vector;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter 
 @Setter 
-@AllArgsConstructor
-
+@AllArgsConstructor 
+@NoArgsConstructor 
+@Builder
 public class Session {
     private String id;
     private String CRDT;

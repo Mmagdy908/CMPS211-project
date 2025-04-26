@@ -2,14 +2,20 @@ package com.apt.project.collaborative_text_editor.model;
 
 import com.apt.project.collaborative_text_editor.enums.MessageType;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter 
 @Setter 
 @AllArgsConstructor
-public class ResponseMessage {
+@NoArgsConstructor
+@Builder
+public class Message {
     private MessageType type;    
     private String senderId;
+    private String sessionId;
+    private String error;
     private String content;
 }

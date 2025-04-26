@@ -12,12 +12,21 @@ public class SessionService {
     // maps session id -> session
     private final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
 
+    //REMOVE THIS
+    String lastSession;
     public String createSession(String userId) throws Exception{
         String sessionId=new Utility().generateUniqueId();
         Session session=new Session(sessionId, "", new Vector<String>(), new Vector<String>());
         session.addEditor(userId);
         activeSessions.put(sessionId, session);
+        lastSession=sessionId;
         return sessionId;
+    }
+
+    public String joinSession(String userId,String code) throws Exception{
+        Session session=activeSessions.get(lastSession);
+        session.addEditor(userId);
+        return lastSession;
     }
 
 }
