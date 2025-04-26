@@ -9,7 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import com.apt.project.collaborative_text_editor.enums.MessageType;
-import com.apt.project.collaborative_text_editor.model.ResponseMessage;
+import com.apt.project.collaborative_text_editor.model.Message;
 import com.apt.project.collaborative_text_editor.service.SessionService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,22 +27,25 @@ public class WebSocketController {
 
         try {
             String sessionId = sessionService.createSession(userId);
-            ResponseMessage message=new ResponseMessage(MessageType.CREATE, userId, sessionId);
+            Message message= Message.builder().type(MessageType.CREATE).senderId(userId).sessionId(sessionId).build();
             messagingTemplate.convertAndSend("/topic/user/" + userId, message);
         } catch (Exception e) {
-            ResponseMessage message=new ResponseMessage(MessageType.ERROR, userId, e.getMessage());
+            Message message=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
             messagingTemplate.convertAndSend("/topic/user/" + userId, message);
         }
     }
 
     // takes shareable code (either editor or viewer) and returns session id
     @MessageMapping("/session/join")
-    public void joinSession(@RequestBody String userId) {
-
+    public void joinSession(@RequestBody Message message) {
+        String userId=message.getSenderId();
         try {
-            
+            String sessionId=sessionService.joinSession(userId, null);
+            Message responseMessage= Message.builder().type(MessageType.JOIN).senderId(userId).sessionId(sessionId).build();
+            messagingTemplate.convertAndSend("/topic/user/" + userId, responseMessage);
         } catch (Exception e) {
-           
+            Message errorMessage=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
+            messagingTemplate.convertAndSend("/topic/user/" + userId, errorMessage);
         }
     }
 
