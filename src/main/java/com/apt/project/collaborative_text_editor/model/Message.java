@@ -1,5 +1,7 @@
 package com.apt.project.collaborative_text_editor.model;
 
+import java.util.List;
+
 import com.apt.project.collaborative_text_editor.enums.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,4 +20,6 @@ public class Message {
     private String sessionId;
     private String error;
     private String content;
+    private List<Integer> characterIds;
+    Operation operation;
 }

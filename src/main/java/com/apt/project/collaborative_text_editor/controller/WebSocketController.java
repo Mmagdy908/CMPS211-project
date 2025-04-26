@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.apt.project.collaborative_text_editor.enums.MessageType;
 import com.apt.project.collaborative_text_editor.model.Message;
+import com.apt.project.collaborative_text_editor.model.Operation;
 import com.apt.project.collaborative_text_editor.service.SessionService;
 
 import lombok.RequiredArgsConstructor;
@@ -61,10 +62,26 @@ public class WebSocketController {
     }
 
     // takes crdt operation and update it then sends back new content
-    @MessageMapping("/session/{sessionId}/update")
-    @SendTo("/topic/session/{sessionId}")
-    public void handleMessage(String message, @DestinationVariable String sessionId) {
-        System.out.println("Received message in room " + sessionId + ": " + message);
+    @MessageMapping("/session/{sessionId}/edit")
+    public void editDocument(@RequestBody Message message, @DestinationVariable String sessionId) {
+        String userId=message.getSenderId();
+        try{
+            Message serviceMessage = sessionService.editDocument(message.getOperation(),sessionId);
+            Message responseMessage=Message.builder()
+                                            .type(MessageType.UPDATE)
+                                            .senderId(userId)
+                                            .content(serviceMessage.getContent())
+                                            .characterIds(serviceMessage.getCharacterIds())
+                                            .build();
+            // return responseMessage;
+            messagingTemplate.convertAndSend("/topic/session/"+sessionId, responseMessage);
+
+        }catch(Exception e){
+            Message errorMessage=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
+            // return errorMessage;
+            messagingTemplate.convertAndSend("/topic/session/"+sessionId , errorMessage);
+
+        }
     }
    
 }
