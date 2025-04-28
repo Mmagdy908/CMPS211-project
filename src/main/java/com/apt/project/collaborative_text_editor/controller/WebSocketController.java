@@ -36,6 +36,8 @@ public class WebSocketController {
         }
     }
 
+    // TODO
+    // COMPLETE LOGIC
     // takes shareable code (either editor or viewer) and returns session id
     @MessageMapping("/session/join")
     public void joinSession(@RequestBody Message message) {
@@ -50,6 +52,7 @@ public class WebSocketController {
         }
     }
 
+    // TODO
     // takes user id 
     @MessageMapping("/session/{sessionId}/leave")
     public void leaveSession(@RequestBody String userId) {
