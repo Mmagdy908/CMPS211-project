@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0"
+    />
+    <title>Spring Boot WebSocket Chat Application</title>
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <noscript>
+      <h2>Sorry! Your browser doesn't support Javascript</h2>
+    </noscript>
+
+    <div id="username-page">
+      <div class="username-page-container">
+        <h1 class="title">Type your username to enter the Chatroom</h1>
+        <form id="username-form" name="username-form">
+          <div class="form-group">
+            <input
+              type="text"
+              id="name"
+              placeholder="name"
+              autocomplete="off"
+              class="form-control"
+            />
+          </div>
+          <div class="form-group">
+            <button type="submit" class="accent username-submit">submit</button>
+          </div>
+        </form>
+        <form id="code-form" name="code-form">
+          <div class="form-group">
+            <input
+              type="text"
+              id="code"
+              placeholder="Code"
+              autocomplete="off"
+              class="form-control"
+            />
+          </div>
+          <div class="form-group">
+            <button class="create username-submit">create</button>
+            <button type="submit" class="accent join-code-submit">
+              join session
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="doc-page" class="hidden">
+      <!-- <div class="chat-container">
+        
+      </div> -->
+      <textarea id="editor" placeholder="Type something..."></textarea>
+      <div class="connecting">Connecting...</div>
+      <div id="log">Waiting for input...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
