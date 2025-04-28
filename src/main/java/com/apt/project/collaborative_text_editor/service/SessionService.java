@@ -14,6 +14,9 @@ public class SessionService {
     // maps session id -> session
     private final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
 
+    //TODO optional
+    // MAP editor and viewer codes to sessions
+
     //REMOVE THIS
     String lastSession;
     public String createSession(String userId) throws Exception{
@@ -25,6 +28,8 @@ public class SessionService {
         return sessionId;
     }
 
+    // TODO 
+    // COMPLETE LOGIC
     public String joinSession(String userId,String code) throws Exception{
         Session session=activeSessions.get(lastSession);
         session.addEditor(userId);

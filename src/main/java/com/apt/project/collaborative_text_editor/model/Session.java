@@ -22,6 +22,8 @@ public class Session {
     private Vector<String> viewers;
     private static int MAX_EDITORS=4;
 
+    // TODO
+    // editor, viewer codes
     public Session(){
         id=new Utility().generateUniqueId();
         document=new Document();
@@ -29,6 +31,7 @@ public class Session {
         viewers=new Vector<String>();
     }
 
+    //TODO
     public void addEditor(String userId) throws Exception{
         if(editors.size()==MAX_EDITORS){
             throw new Exception("Max number of editors is reached");
