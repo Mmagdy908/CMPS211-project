@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.apt.project.collaborative_text_editor.Utility;
 import com.apt.project.collaborative_text_editor.model.Message;
@@ -14,6 +15,7 @@ import com.apt.project.collaborative_text_editor.model.User;
 public class SessionService {
     // maps session id -> session
     private final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
 
     //TODO optional
     // MAP editor and viewer codes to sessions
@@ -24,6 +26,7 @@ public class SessionService {
         Session session=new Session();
         String sessionId=session.getId();
         session.addEditor(user);
+        
         activeSessions.put(sessionId, session);
         lastSession=session; // REMOVE
         return sessionId;
@@ -37,12 +40,32 @@ public class SessionService {
         return session;
     }
 
-    public Message editDocument(Operation op, String sessionId) throws Exception{
+    public Message editDocument(Operation op, String sessionId, User sender) throws Exception{
+        lock.lock();
+        try{
+            Session session=activeSessions.get(sessionId);
+           
+           
+            session.edit(op,sender);
+            Message message=Message.builder()
+            .content(session.getDocumentContent())
+            .characterIds(session.getCharacterIds()).editors(session.getEditors())
+            .build();
+            return message;
+        }
+        finally{
+            lock.unlock();
+        }
+    }
+
+    public Message updateCursors( String sessionId, Vector<User> editors) throws Exception{
         Session session=activeSessions.get(sessionId);
-        session.edit(op);
+        session.setEditors(editors);
         Message message=Message.builder()
         .content(session.getDocumentContent())
-        .characterIds(session.getCharacterIds()).build();
+        .characterIds(session.getCharacterIds()).editors(session.getEditors())
+        .viewers(session.getViewers())
+        .build();
         return message;
     }
 
