@@ -9,6 +9,7 @@ import com.apt.project.collaborative_text_editor.Utility;
 import com.apt.project.collaborative_text_editor.model.Message;
 import com.apt.project.collaborative_text_editor.model.Operation;
 import com.apt.project.collaborative_text_editor.model.Session;
+import com.apt.project.collaborative_text_editor.model.User;
 
 public class SessionService {
     // maps session id -> session
@@ -18,22 +19,22 @@ public class SessionService {
     // MAP editor and viewer codes to sessions
 
     //REMOVE THIS
-    String lastSession;
-    public String createSession(String userId) throws Exception{
+    Session lastSession;
+    public String createSession(User user) throws Exception{
         Session session=new Session();
         String sessionId=session.getId();
-        session.addEditor(userId);
+        session.addEditor(user);
         activeSessions.put(sessionId, session);
-        lastSession=sessionId; // REMOVE
+        lastSession=session; // REMOVE
         return sessionId;
     }
 
     // TODO 
     // COMPLETE LOGIC
-    public String joinSession(String userId,String code) throws Exception{
-        Session session=activeSessions.get(lastSession);
-        session.addEditor(userId);
-        return lastSession;
+    public Session joinSession(User user,String code) throws Exception{
+        Session session=activeSessions.get(lastSession.getId());
+        session.addEditor(user);
+        return session;
     }
 
     public Message editDocument(Operation op, String sessionId) throws Exception{

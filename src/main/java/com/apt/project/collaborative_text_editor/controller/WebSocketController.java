@@ -1,5 +1,9 @@
 package com.apt.project.collaborative_text_editor.controller;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
+
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -11,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import com.apt.project.collaborative_text_editor.enums.MessageType;
 import com.apt.project.collaborative_text_editor.model.Message;
 import com.apt.project.collaborative_text_editor.model.Operation;
+import com.apt.project.collaborative_text_editor.model.Session;
+import com.apt.project.collaborative_text_editor.model.User;
 import com.apt.project.collaborative_text_editor.service.SessionService;
 
 import lombok.RequiredArgsConstructor;
@@ -24,15 +30,15 @@ public class WebSocketController {
 
     // takes user id and sends the new session id
     @MessageMapping("/session/create")
-    public void createSession(@RequestBody String userId) {
+    public void createSession(@RequestBody User user) {
 
         try {
-            String sessionId = sessionService.createSession(userId);
-            Message message= Message.builder().type(MessageType.CREATE).senderId(userId).sessionId(sessionId).build();
-            messagingTemplate.convertAndSend("/topic/user/" + userId, message);
+            String sessionId = sessionService.createSession(user);
+            Message message= Message.builder().type(MessageType.CREATE).sender(user).sessionId(sessionId).editors( Arrays.asList(user)).build();
+            messagingTemplate.convertAndSend("/topic/user/" + user.getId(), message);
         } catch (Exception e) {
-            Message message=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
-            messagingTemplate.convertAndSend("/topic/user/" + userId, message);
+            Message message=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
+            messagingTemplate.convertAndSend("/topic/user/" + user.getId(), message);
         }
     }
 
@@ -41,14 +47,19 @@ public class WebSocketController {
     // takes shareable code (either editor or viewer) and returns session id
     @MessageMapping("/session/join")
     public void joinSession(@RequestBody Message message) {
-        String userId=message.getSenderId();
+        User user=message.getSender();
         try {
-            String sessionId=sessionService.joinSession(userId, null);
-            Message responseMessage= Message.builder().type(MessageType.JOIN).senderId(userId).sessionId(sessionId).build();
-            messagingTemplate.convertAndSend("/topic/user/" + userId, responseMessage);
+            Session session=sessionService.joinSession(user, null);
+
+            Message responseMessage= Message.builder().type(MessageType.JOIN).sender(user)
+            .sessionId(session.getId()).viewers(session.getViewers()).editors(session.getEditors())
+            .build();
+
+            messagingTemplate.convertAndSend("/topic/session/"+session.getId(), responseMessage);
+            messagingTemplate.convertAndSend("/topic/user/" + user.getId(), responseMessage);
         } catch (Exception e) {
-            Message errorMessage=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
-            messagingTemplate.convertAndSend("/topic/user/" + userId, errorMessage);
+            Message errorMessage=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
+            messagingTemplate.convertAndSend("/topic/user/" + user.getId(), errorMessage);
         }
     }
 
@@ -67,20 +78,22 @@ public class WebSocketController {
     // takes crdt operation and update it then sends back new content
     @MessageMapping("/session/{sessionId}/edit")
     public void editDocument(@RequestBody Message message, @DestinationVariable String sessionId) {
-        String userId=message.getSenderId();
+        User user=message.getSender();
         try{
             Message serviceMessage = sessionService.editDocument(message.getOperation(),sessionId);
             Message responseMessage=Message.builder()
                                             .type(MessageType.UPDATE)
-                                            .senderId(userId)
+                                            .sender(user)
                                             .content(serviceMessage.getContent())
                                             .characterIds(serviceMessage.getCharacterIds())
+                                            .editors(serviceMessage.getEditors())
+                                            .viewers(serviceMessage.getViewers())
                                             .build();
             // return responseMessage;
             messagingTemplate.convertAndSend("/topic/session/"+sessionId, responseMessage);
 
         }catch(Exception e){
-            Message errorMessage=Message.builder().type(MessageType.ERROR).senderId(userId).error(e.getMessage()).build();
+            Message errorMessage=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
             // return errorMessage;
             messagingTemplate.convertAndSend("/topic/session/"+sessionId , errorMessage);
 

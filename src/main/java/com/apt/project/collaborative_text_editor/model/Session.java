@@ -18,8 +18,8 @@ import lombok.Setter;
 public class Session {
     private String id;
     private Document document;
-    private Vector<String> editors;
-    private Vector<String> viewers;
+    private Vector<User> editors;
+    private Vector<User> viewers;
     private static int MAX_EDITORS=4;
 
     // TODO
@@ -27,20 +27,20 @@ public class Session {
     public Session(){
         id=new Utility().generateUniqueId();
         document=new Document();
-        editors=new Vector<String>();
-        viewers=new Vector<String>();
+        editors=new Vector<User>();
+        viewers=new Vector<User>();
     }
 
     //TODO
-    public void addEditor(String userId) throws Exception{
+    public void addEditor(User user) throws Exception{
         if(editors.size()==MAX_EDITORS){
             throw new Exception("Max number of editors is reached");
         }else{
-            editors.add(userId);
+            editors.add(user);
         }
     }
 
-    public void addViewer(String userId) throws Exception{
+    public void addViewer(User user) throws Exception{
            // TODO
     }
 
