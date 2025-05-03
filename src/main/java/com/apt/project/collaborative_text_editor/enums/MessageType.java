@@ -5,6 +5,7 @@ public enum MessageType {
     CREATE, 
     JOIN, 
     UPDATE,
+    CURSOR,
     LEAVE,
     ERROR
 }

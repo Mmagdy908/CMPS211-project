@@ -23,6 +23,6 @@ public class Message {
     private String content;
     private List<Integer> characterIds;
     private Operation operation;
-    private List<User> editors;
-    private List<User> viewers;
+    private Vector<User> editors;
+    private Vector<User> viewers;
 }

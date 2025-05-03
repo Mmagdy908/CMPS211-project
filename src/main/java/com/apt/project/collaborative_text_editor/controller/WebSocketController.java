@@ -33,8 +33,10 @@ public class WebSocketController {
     public void createSession(@RequestBody User user) {
 
         try {
+           user.setCursorPosition(0);
             String sessionId = sessionService.createSession(user);
-            Message message= Message.builder().type(MessageType.CREATE).sender(user).sessionId(sessionId).editors( Arrays.asList(user)).build();
+            
+            Message message= Message.builder().type(MessageType.CREATE).sender(user).sessionId(sessionId).editors( new Vector<>(Arrays.asList(user))).build();
             messagingTemplate.convertAndSend("/topic/user/" + user.getId(), message);
         } catch (Exception e) {
             Message message=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
@@ -79,10 +81,39 @@ public class WebSocketController {
     @MessageMapping("/session/{sessionId}/edit")
     public void editDocument(@RequestBody Message message, @DestinationVariable String sessionId) {
         User user=message.getSender();
+
         try{
-            Message serviceMessage = sessionService.editDocument(message.getOperation(),sessionId);
+            
+            Message serviceMessage = sessionService
+                                    .editDocument(message.getOperation(),sessionId,message.getSender());
+
             Message responseMessage=Message.builder()
                                             .type(MessageType.UPDATE)
+                                            .sender(user)
+                                            .content(serviceMessage.getContent())
+                                            .characterIds(serviceMessage.getCharacterIds())
+                                            .editors(serviceMessage.getEditors())
+                                            .viewers(serviceMessage.getViewers())
+                                            .build();
+            messagingTemplate.convertAndSend("/topic/session/"+sessionId, responseMessage);
+
+        }catch(Exception e){
+            Message errorMessage=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
+            // return errorMessage;
+            messagingTemplate.convertAndSend("/topic/session/"+sessionId , errorMessage);
+
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/update-cursor")
+    public void updateCursors(@RequestBody Message message, @DestinationVariable String sessionId) {
+        User user=message.getSender();
+        try{
+            Message serviceMessage = sessionService
+                                    .updateCursors(sessionId,message.getEditors());
+
+            Message responseMessage=Message.builder()
+                                            .type(MessageType.CURSOR)
                                             .sender(user)
                                             .content(serviceMessage.getContent())
                                             .characterIds(serviceMessage.getCharacterIds())
