@@ -79,7 +79,7 @@ public class Session {
     public void edit(Operation op,User sender){
 
         document.applyOperation(op);
-       
+    //    System.out.println("sender cursor before: " +sender.getCursorPosition());
         
         for(int i=0;i<editors.size();i++){
             int currentCursorPosition = editors.elementAt(i).getCursorPosition();
@@ -87,9 +87,18 @@ public class Session {
                 editors.elementAt(i).setCursorPosition(currentCursorPosition+1);
             }
             else if (op.getType()==Type.DELETE && currentCursorPosition>=sender.getCursorPosition() && sender.getCursorPosition()>0)
+            {
+                // System.out.println("user: " +editors.elementAt(i).getUsername());
+                // System.out.println("user cursor before: " +editors.elementAt(i).getCursorPosition());
+
                 editors.elementAt(i).setCursorPosition(currentCursorPosition-1);
+                // System.out.println("user cursor after: " +editors.elementAt(i).getCursorPosition());
+
+            }
 
         }        
+        // System.out.println("sender cursor after: " +sender.getCursorPosition());
+
 
     }
 

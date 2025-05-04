@@ -423,7 +423,13 @@ editor.addEventListener("mouseup", editCursorPosition);
 editor.addEventListener("focus", editCursorPosition);
 // editor.addEventListener("input", editCursorPosition);
 
-function editCursorPosition() {
+function editCursorPosition(event) {
+  if (
+    event.type === "keyup" &&
+    !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
+  ) {
+    return;
+  }
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
 
