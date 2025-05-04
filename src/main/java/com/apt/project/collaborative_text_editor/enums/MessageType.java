@@ -7,5 +7,6 @@ public enum MessageType {
     UPDATE,
     CURSOR,
     LEAVE,
-    ERROR
+    ERROR,
+    PRESENCE
 }

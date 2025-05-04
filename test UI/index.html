@@ -51,12 +51,36 @@
     </div>
 
     <div id="doc-page" class="hidden">
+
+        <!-- session codes (editors only) -->
+  <div class="session‑info">
+    <strong>Editor Code:</strong> <span id="editor-code">–</span>
+    <strong>Viewer Code:</strong> <span id="viewer-code">–</span>
+  </div>
+
+  <!-- list of active users & their cursor positions -->
+  <div class="user‑list">
+    <h4>Active users</h4>
+    <ul id="users"></ul>
+  </div>
+
+  <!-- undo / redo -->
+  <div class="undo‑redo">
+    <button id="undo-button">Undo</button>
+    <button id="redo-button">Redo</button>
+  </div>
+
+  <textarea id="editor" placeholder="Type something..."></textarea>
       <!-- <div class="chat-container">
         
       </div> -->
-      <textarea id="editor" placeholder="Type something..."></textarea>
       <div class="connecting">Connecting...</div>
       <div id="log">Waiting for input...</div>
+      <div class="import-export-buttons">
+        <button id="import-button">Import</button>
+        <input type="file" id="import-file" accept=".txt" style="display:none" />
+        <button id="export-button">Export</button>
+      </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>

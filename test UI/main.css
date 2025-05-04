@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+.session‑info, .user‑list, .undo‑redo { margin: 0.5em 0; }
+.user‑list ul { list-style: none; padding: 0; }
+.user‑list li { margin: 0.2em 0; }
+
 html,
 body {
   height: 100%;

@@ -25,4 +25,9 @@ public class Message {
     private Operation operation;
     private Vector<User> editors;
     private Vector<User> viewers;
+    private String editorCode;
+    private String viewerCode;
+    private String code;
+    //private List<String> activeUsers;
+    private Integer cursorPosition;
 }

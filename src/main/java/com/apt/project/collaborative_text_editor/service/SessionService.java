@@ -1,5 +1,6 @@
 package com.apt.project.collaborative_text_editor.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -17,28 +18,59 @@ public class SessionService {
     private final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
 
-    //TODO optional
+    // TODO optional
     // MAP editor and viewer codes to sessions
 
-    //REMOVE THIS
+    // REMOVE THIS
+
+    // public String createSession(String userId) throws Exception{
+    // Session session=new Session();
+    // String sessionId=session.getId();
+    // session.addEditor(userId);
+    // activeSessions.put(sessionId, session);
+    // lastSession=sessionId; // REMOVE
+    // return sessionId;
+    // }
     Session lastSession;
-    public String createSession(User user) throws Exception{
-        Session session=new Session();
-        String sessionId=session.getId();
+    private final Map<String, String> editorCodeToSession = new ConcurrentHashMap<>();
+    private final Map<String, String> viewerCodeToSession = new ConcurrentHashMap<>();
+
+    public String createSession(User user) throws Exception {
+        Session session = new Session();
+        String sessionId = session.getId();
         session.addEditor(user);
         
         activeSessions.put(sessionId, session);
-        lastSession=session; // REMOVE
+        editorCodeToSession.put(session.getDocument().getEditorCode(), sessionId);
+        viewerCodeToSession.put(session.getDocument().getViewerCode(), sessionId);
+        lastSession = session; // REMOVE
         return sessionId;
     }
 
-    // TODO 
+    // TODO
     // COMPLETE LOGIC
-    public Session joinSession(User user,String code) throws Exception{
-        Session session=activeSessions.get(lastSession.getId());
-        session.addEditor(user);
-        return session;
+    public String joinSession(User user, String code) throws Exception {
+        // Session session=activeSessions.get(lastSession);
+        // session.addEditor(userId);
+        // return lastSession;
+
+        String sessionId = editorCodeToSession.get(code);
+        boolean isEditor = true;
+        if (sessionId == null) {
+            sessionId = viewerCodeToSession.get(code);
+            isEditor = false;
+        }
+        if (sessionId == null)
+            throw new Exception("Invalid code");
+        Session session = activeSessions.get(sessionId);
+        if (isEditor)
+            session.addEditor(user);
+        else
+            session.addViewer(user);
+        return sessionId;
     }
+
+
 
     public Message editDocument(Operation op, String sessionId, User sender) throws Exception{
         lock.lock();
@@ -67,6 +99,27 @@ public class SessionService {
         .viewers(session.getViewers())
         .build();
         return message;
+    }
+
+    public Session getSession(String sessionId) {
+        return activeSessions.get(sessionId);
+    }
+
+    public List<User> getParticipants(String sessionId) {
+        Session s = activeSessions.get(sessionId);
+        List<User> all = new ArrayList<>();
+        all.addAll(s.getEditors());
+        all.addAll(s.getViewers());
+        return all;
+    }
+
+    public Vector<User> getEditors(String sessionId) {
+        Session s = activeSessions.get(sessionId);
+        return s.getEditors();
+    }
+    public Vector<User> getViewers(String sessionId) {
+        Session s = activeSessions.get(sessionId);
+        return s.getViewers();
     }
 
 }

@@ -159,9 +159,11 @@ public class TreeCRDT implements CRDT {
         try {
             CRDTNode node = findNodeById(charId);
             if (node != null && !node.isDeleted) {
+                System.out.println("Before: "+getDocument());
                 node.isDeleted = true;
                 Operation op = new Operation(Operation.Type.DELETE, charId, node.ch, userId, System.currentTimeMillis());
                 addToHistory(userId, op);
+                System.out.println("After: "+getDocument());
                 return op;
             }
             return null;
