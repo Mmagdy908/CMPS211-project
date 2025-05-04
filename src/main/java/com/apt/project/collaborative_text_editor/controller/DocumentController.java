@@ -63,10 +63,18 @@ public class DocumentController {
     @PostMapping("/{id}/insert")
     public ResponseEntity<Operation> insertCharacter(
             @PathVariable String id,
-            @RequestParam int parentId,
+            @RequestParam String parentId,
             @RequestParam Character ch,
-            @RequestParam int userId) {
-        Operation operation = documentService.insertCharacter(id, parentId, ch, userId);
+            @RequestParam int userId,
+            @RequestParam(required = false) String characterId) {
+        
+        Operation operation;
+        if (characterId != null && !characterId.isEmpty()) {
+            operation = documentService.insertCharacter(id, parentId, ch, userId, characterId);
+        } else {
+            operation = documentService.insertCharacter(id, parentId, ch, userId);
+        }
+        
         if (operation != null) {
             return ResponseEntity.ok(operation);
         }
@@ -76,7 +84,7 @@ public class DocumentController {
     @PostMapping("/{id}/delete")
     public ResponseEntity<Operation> deleteCharacter(
             @PathVariable String id,
-            @RequestParam int charId,
+            @RequestParam String charId,
             @RequestParam int userId) {
         Operation operation = documentService.deleteCharacter(id, charId, userId);
         if (operation != null) {

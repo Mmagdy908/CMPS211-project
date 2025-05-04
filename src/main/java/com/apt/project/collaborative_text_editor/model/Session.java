@@ -104,7 +104,7 @@ public class Session {
     public String getDocumentContent(){
        return document.getText();
     }
-    public List<Integer> getCharacterIds(){
+    public List<String> getCharacterIds(){
        return document.getCharacterIds();
     }
     public Vector<User> getEditors(){

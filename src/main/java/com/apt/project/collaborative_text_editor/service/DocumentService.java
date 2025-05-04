@@ -41,7 +41,8 @@ public class DocumentService {
     
     // Character-based editing methods
     
-    public Operation insertCharacter(String documentId, int parentId, Character ch, int userId) {
+    // For backward compatibility
+    public Operation insertCharacter(String documentId, String parentId, Character ch, int userId) {
         Document document = documents.get(documentId);
         if (document != null) {
             return document.insertCharacter(parentId, ch, userId);
@@ -49,7 +50,17 @@ public class DocumentService {
         return null;
     }
     
-    public List<Operation> insertText(String documentId, int parentId, String text, int userId) {
+    // New method with characterId parameter
+    public Operation insertCharacter(String documentId, String parentId, Character ch, int userId, String characterId) {
+        Document document = documents.get(documentId);
+        if (document != null) {
+            return document.insertCharacter(parentId, ch, userId, characterId);
+        }
+        return null;
+    }
+    
+    // For backward compatibility
+    public List<Operation> insertText(String documentId, String parentId, String text, int userId) {
         Document document = documents.get(documentId);
         if (document != null) {
             return document.insertText(parentId, text, userId);
@@ -57,7 +68,16 @@ public class DocumentService {
         return null;
     }
     
-    public Operation deleteCharacter(String documentId, int charId, int userId) {
+    // New method with characterIds parameter
+    public List<Operation> insertText(String documentId, String parentId, String text, int userId, List<String> characterIds) {
+        Document document = documents.get(documentId);
+        if (document != null) {
+            return document.insertText(parentId, text, userId, characterIds);
+        }
+        return null;
+    }
+    
+    public Operation deleteCharacter(String documentId, String charId, int userId) {
         Document document = documents.get(documentId);
         if (document != null) {
             return document.deleteCharacter(charId, userId);
@@ -100,7 +120,7 @@ public class DocumentService {
         return "";
     }
 
-    public List<Integer> getCharacterIds(String documentId) {
+    public List<String> getCharacterIds(String documentId) {
         Document document = documents.get(documentId);
         if (document != null) {
             return document.getCharacterIds();

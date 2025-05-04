@@ -12,33 +12,62 @@ public interface CRDT {
     /**
      * Inserts text at the specified position in the document.
      *
-     * @param parentId The id of parent character where the text should be inserted. null or -1 if inserting at beginning
-     * @param ch    The character to insert.
-     * @param userId   The unique identifier of the user performing the operation.
-     * @return Represents a single edit (insertion) with metadata 
-     *         such as parent id, ch, user id, and timestamp.
+     * @param parentId The id of parent character where the text should be
+     * inserted. null or "-1" if inserting at beginning
+     * @param ch The character to insert.
+     * @param userId The unique identifier of the user performing the operation.
+     * @param characterId The frontend-provided ID for this character
+     * @return Represents a single edit (insertion) with metadata such as parent
+     * id, ch, user id, and timestamp.
      */
-    Operation insert(int parentId, Character ch, int userId);
+    Operation insert(String parentId, Character ch, int userId, String characterId);
 
     /**
-     * Inserts multiple characters (for paste operations) at the specified position.
+     * Inserts text at the specified position in the document (without explicit character ID).
+     *
+     * @param parentId The id of parent character where the text should be
+     * inserted. null or "-1" if inserting at beginning
+     * @param ch The character to insert.
+     * @param userId The unique identifier of the user performing the operation.
+     * @return Represents a single edit (insertion) with metadata such as parent
+     * id, ch, user id, and timestamp.
+     */
+    Operation insert(String parentId, Character ch, int userId);
+
+    /**
+     * Inserts multiple characters (for paste operations) at the specified
+     * position with provided character IDs.
      *
      * @param parentId The id of parent character where the text should be inserted
-     * @param text     The text to insert
-     * @param userId   The unique identifier of the user performing the operation
+     * @param text The text to insert
+     * @param userId The unique identifier of the user performing the operation
+     * @param characterIds List of frontend-provided character IDs, one for each character
      * @return List of operations representing the paste action
      */
-    List<Operation> insertText(int parentId, String text, int userId);
+    List<Operation> insertText(String parentId, String text, int userId, List<String> characterIds);
 
     /**
-     * Deletes a specified number of characters starting from the given position.
+     * Inserts multiple characters (for paste operations) at the specified
+     * position.
      *
-     * @param charId The id of character to delete 
-     * @param userId   The unique identifier of the user performing the operation.
-     * @return An Operation object representing the deletion with metadata 
-     *         such as parent id, ch, user id, and timestamp.
+     * @param parentId The id of parent character where the text should be
+     * inserted
+     * @param text The text to insert
+     * @param userId The unique identifier of the user performing the operation
+     * @return List of operations representing the paste action
      */
-    Operation delete(int charId, int userId);
+    List<Operation> insertText(String parentId, String text, int userId);
+
+    /**
+     * Deletes a specified number of characters starting from the given
+     * position.
+     *
+     * @param charId The id of character to delete
+     * @param userId The unique identifier of the user performing the operation.
+     * @return An Operation object representing the deletion with metadata such
+     * as parent id, ch, user id, and timestamp.
+     */
+    Operation delete(String charId, int userId);
 
     /**
      * Applies the given operation to the local replica.
@@ -69,11 +98,12 @@ public interface CRDT {
      * @return true if the redo was successful, false otherwise
      */
     boolean redo(String userId);
-    
+
     /**
-     * Get a list of character IDs and their positions to support cursor positioning
-     * 
-     * @return Map of character IDs to their positions in the document
+     * Get a list of character IDs and their positions to support cursor
+     * positioning
+     *
+     * @return List of character IDs in the document
      */
-    List<Integer> getCharacterIds();
+    List<String> getCharacterIds();
 }

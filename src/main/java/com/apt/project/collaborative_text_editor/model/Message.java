@@ -21,7 +21,7 @@ public class Message {
     private String sessionId;
     private String error;
     private String content;
-    private List<Integer> characterIds;
+    private List<String> characterIds; // Changed from List<Integer> to List<String>
     private Operation operation;
     private Vector<User> editors;
     private Vector<User> viewers;
