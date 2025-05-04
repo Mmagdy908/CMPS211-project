@@ -24,7 +24,7 @@ public class TreeCRDT implements CRDT {
             this.timestamp = timestamp;
             this.id = id != null ? id : (userId + "-" + timestamp);
         }
-        
+
         @Override
         public int compareTo(CharacterID other) {
             // Newer timestamps should appear first (descending timestamp order)
@@ -113,7 +113,7 @@ public class TreeCRDT implements CRDT {
     public Operation insert(String parentId, Character ch, int userId) {
         return insert(parentId, ch, userId, null);
     }
-    
+
     public Operation insert(String parentId, Character ch, int userId, String characterId) {
         lock.lock();
         try {
@@ -151,10 +151,10 @@ public class TreeCRDT implements CRDT {
         try {
             for (int i = 0; i < text.length(); i++) {
                 // Use provided character ID if available, otherwise generate one
-                String characterId = (characterIds != null && i < characterIds.size()) 
-                    ? characterIds.get(i) 
-                    : userId + "-" + System.currentTimeMillis() + "-" + i;
-                
+                String characterId = (characterIds != null && i < characterIds.size())
+                        ? characterIds.get(i)
+                        : userId + "-" + System.currentTimeMillis() + "-" + i;
+
                 Operation op = insert(currentParentId, text.charAt(i), userId, characterId);
                 operations.add(op);
                 currentParentId = op.getCharacterId();
@@ -179,7 +179,8 @@ public class TreeCRDT implements CRDT {
             if (node != null && !node.isDeleted) {
                 System.out.println("Before: "+getDocument());
                 node.isDeleted = true;
-                Operation op = new Operation(Operation.Type.DELETE, charId, node.ch, userId, System.currentTimeMillis());
+                long timestamp = System.currentTimeMillis();
+                Operation op = new Operation(Operation.Type.DELETE, charId, node.ch, userId, timestamp, charId);
                 addToHistory(userId, op);
                 System.out.println("After: "+getDocument());
                 return op;

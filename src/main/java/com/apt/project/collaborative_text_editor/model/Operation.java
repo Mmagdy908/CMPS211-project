@@ -2,6 +2,7 @@ package com.apt.project.collaborative_text_editor.model;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Represents an edit operation (insertion or deletion).
@@ -28,16 +29,15 @@ public class Operation implements Serializable {
         this.userId = userId;
         this.timestamp = timestamp;
         this.characterId = characterId != null ? characterId : generateDefaultId(userId, timestamp);
-        this.operationId = this.characterId; // Use the character ID as the operation ID
-    }
-    
-    // For backward compatibility
-    public Operation(Type type, String parentId, Character ch, int userId, long timestamp) {
-        this(type, parentId, ch, userId, timestamp, null);
+        // Generate a unique operation ID 
+        this.operationId = "op-" + UUID.randomUUID().toString();
     }
 
     public Operation() {
     }
+     // public Operation(Type type, String parentId, Character ch, int userId, long timestamp) {
+    //     this(type, parentId, ch, userId, timestamp, null);
+    // }
 
     public Type getType() {
         return type;
@@ -62,7 +62,7 @@ public class Operation implements Serializable {
     public String getOperationId() {
         return operationId;
     }
-    
+
     public String getCharacterId() {
         return characterId;
     }
@@ -86,7 +86,7 @@ public class Operation implements Serializable {
 
     @Override
     public int hashCode() {
-        return operationId.hashCode();
+        return Objects.hashCode(operationId);
     }
 
     @Override
