@@ -1,7 +1,7 @@
 "use strict";
 
-const URL = "http://192.168.1.5:3000";
-//const URL = "http://localhost:3000";
+const URL = "http://192.168.1.4:3000";
+// const URL = "http://localhost:3000";
 var usernamePage = document.querySelector("#username-page");
 var chatPage = document.querySelector("#doc-page");
 var createBtn = document.querySelector(".create");
@@ -16,7 +16,7 @@ var connectingElement = document.querySelector(".connecting");
 const editor = document.getElementById("editor");
 const log = document.getElementById("log");
 
-let activeUsers = [];            // [{ userId, name, color }]
+let activeUsers = []; // [{ userId, name, color }]
 const usersUl = document.getElementById("users");
 const editorCodeSpan = document.getElementById("editor-code");
 const viewerCodeSpan = document.getElementById("viewer-code");
@@ -101,10 +101,14 @@ function joinSession(event) {
     return;
   }
 
-  stompClient.send("/app/session/join", {},  JSON.stringify({
+  stompClient.send(
+    "/app/session/join",
+    {},
+    JSON.stringify({
       sender: me,
-      code: code 
-    }));
+      code: code,
+    })
+  );
 
   usernamePage.classList.add("hidden");
   chatPage.classList.remove("hidden");
@@ -232,7 +236,7 @@ function onMessageReceived(payload) {
       editorCodeSpan.textContent = message.editorCode;
       viewerCodeSpan.textContent = message.viewerCode;
     }
-    
+
     stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
     editors = message.editors;
     console.log(`User: ${me.id} created session: ${sessionId}`);
@@ -241,14 +245,14 @@ function onMessageReceived(payload) {
     if (message.sender.id === me.id) {
       sessionId = message.sessionId;
 
-    if (message.isViewer) {
-      editor.setAttribute("disabled", "disabled");
-    }
+      if (message.isViewer) {
+        editor.setAttribute("disabled", "disabled");
+      }
 
       stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
       messageElement.classList.add("event-message");
 
-    addUser(message.senderId);
+      addUser(message.senderId);
     }
 
     editors = message.editors;
@@ -256,18 +260,20 @@ function onMessageReceived(payload) {
     console.log(
       `User (${message.sender.id}) joined session (${message.sessionId})`
     );
-
   } else if (message.type === "CURSOR") {
     // removeUser(message.senderId);
-    showRemoteCursor(message.cursor);
-
+    // showRemoteCursor(message.cursor);
+    editors = message.editors;
+    updateCursorPosition();
+    console.log(`Updating Cursors...`);
   } else if (message.type === "UPDATE") {
     updateDocument(message.content, message.characterIds);
     editors = message.editors;
+    updateCursorPosition();
     console.log("Editors", editors);
     // updateCursorPosition();
     // console.log(`Updating Document...`);
-  // } else if (message.type === "CURSOR") {
+    // } else if (message.type === "CURSOR") {
     // editors = message.editors;
     // updateCursorPosition();
     // console.log(`Updating Cursors...`);
@@ -275,7 +281,6 @@ function onMessageReceived(payload) {
     // messageElement.classList.add("event-message");
     // message.content = message.sender.id + " left!";
     removeUser(message.senderId);
-
   } else if (message.type === "PRESENCE") {
     setActiveUsers(message.activeUsers);
 
@@ -316,23 +321,27 @@ function setActiveUsers(listOfUserIds) {
   // listOfUserIds is e.g. ["u1","u2","u3"]
   activeUsers = listOfUserIds.map((uid, i) => ({
     userId: uid,
-    name: uid,                              // display the id as the name
-    color: colors[i % colors.length]
+    name: uid, // display the id as the name
+    color: colors[i % colors.length],
   }));
   renderUserList();
 }
 
 function addUser(userId) {
-  if (!activeUsers.find(u=>u.userId===userId)) {
-    activeUsers.push({ userId, name: userId, color: colors[activeUsers.length % colors.length] });
+  if (!activeUsers.find((u) => u.userId === userId)) {
+    activeUsers.push({
+      userId,
+      name: userId,
+      color: colors[activeUsers.length % colors.length],
+    });
     renderUserList();
   }
 }
 
 function removeUser(userId) {
-  activeUsers = activeUsers.filter(u=>u.userId!==userId);
-      messageElement.classList.add("event-message");
-    message.content = message.sender + " left!";
+  activeUsers = activeUsers.filter((u) => u.userId !== userId);
+  messageElement.classList.add("event-message");
+  message.content = message.sender + " left!";
   renderUserList();
 }
 
@@ -348,7 +357,7 @@ function removeUser(userId) {
 
 function renderUserList() {
   usersUl.innerHTML = "";
-  activeUsers.forEach(u => {
+  activeUsers.forEach((u) => {
     const li = document.createElement("li");
     // display the username rather than raw id
     li.textContent = u.name;
@@ -357,41 +366,41 @@ function renderUserList() {
   });
 }
 
-
 // whenever caret moves, broadcast it:
-editor.addEventListener("keyup", sendCursor);
-editor.addEventListener("mouseup", sendCursor);
+// editor.addEventListener("keyup", sendCursor);
+// editor.addEventListener("mouseup", sendCursor);
 
-function sendCursor() {
-  if (!sessionId) return;
-  const pos = editor.selectionStart;
-  stompClient.send(
-    `/app/session/${sessionId}/edit`,
-    {},
-    JSON.stringify({
-      senderId: userId,
-      type: "CURSOR",
-      cursor: { position: pos }
-    })
-  );
-}
+// function sendCursor() {
+//   if (!sessionId) return;
+//   const pos = editor.selectionStart;
+//   stompClient.send(
+//     `/app/session/${sessionId}/edit`,
+//     {},
+//     JSON.stringify({
+//       senderId: userId,
+//       type: "CURSOR",
+//       cursor: { position: pos },
+//     })
+//   );
+// }
 
 // show remote cursor by overlaying a marker (simple version updates user‑list)
-function showRemoteCursor({ userId: uid, position }) {
-  // highlight that user in the list with their position
-  const li = Array.from(usersUl.children)
-    .find(li=>li.textContent===uid);
-  if (li) li.textContent = `${uid} @${position}`;
-}
-
-
+// function showRemoteCursor({ userId: uid, position }) {
+//   // highlight that user in the list with their position
+//   const li = Array.from(usersUl.children).find((li) => li.textContent === uid);
+//   if (li) li.textContent = `${uid} @${position}`;
+// }
 
 undoButton.addEventListener("click", () => {
-  fetch(`${URL}/api/documents/${sessionId}/undo?userId=${userId}`, { method: "POST" });
+  fetch(`${URL}/api/documents/${sessionId}/undo?userId=${userId}`, {
+    method: "POST",
+  });
 });
 
 redoButton.addEventListener("click", () => {
-  fetch(`${URL}/api/documents/${sessionId}/redo?userId=${userId}`, { method: "POST" });
+  fetch(`${URL}/api/documents/${sessionId}/redo?userId=${userId}`, {
+    method: "POST",
+  });
 });
 
 function getAvatarColor(messageSender) {
@@ -476,7 +485,6 @@ const exportButton = document.getElementById("export-button");
 //   });
 // }
 
-
 if (importButton && importFile) {
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", (event) => {
@@ -486,7 +494,7 @@ if (importButton && importFile) {
     reader.onload = function (e) {
       const text = e.target.result;
       // clear local editor
-      editor.value = '';
+      editor.value = "";
       // send each character as an individual operation
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
@@ -504,8 +512,8 @@ if (importButton && importFile) {
               parentId: parentId,
               ch: ch,
               userId: me.id,
-              timestamp: Date.now()
-            }
+              timestamp: Date.now(),
+            },
           })
         );
       }
