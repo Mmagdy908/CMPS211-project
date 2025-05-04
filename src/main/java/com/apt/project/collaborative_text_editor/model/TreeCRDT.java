@@ -17,12 +17,14 @@ public class TreeCRDT implements CRDT {
 
         final int userId;
         final long timestamp;
+        final String id; // Added field for explicit ID from frontend
 
-        CharacterID(int userId, long timestamp) {
+        CharacterID(int userId, long timestamp, String id) {
             this.userId = userId;
             this.timestamp = timestamp;
+            this.id = id != null ? id : (userId + "-" + timestamp);
         }
-
+        
         @Override
         public int compareTo(CharacterID other) {
             // Newer timestamps should appear first (descending timestamp order)
@@ -39,12 +41,12 @@ public class TreeCRDT implements CRDT {
                 return false;
             }
             CharacterID other = (CharacterID) o;
-            return userId == other.userId && timestamp == other.timestamp;
+            return Objects.equals(id, other.id);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(userId, timestamp);
+            return id.hashCode();
         }
     }
 
@@ -54,12 +56,12 @@ public class TreeCRDT implements CRDT {
         Character ch;
         boolean isDeleted = false;
         TreeSet<CRDTNode> children = new TreeSet<>();
-        int nodeId; // A unique identifier for the node
+        String nodeId; // Changed from int to String
 
         CRDTNode(CharacterID id, Character ch) {
             this.id = id;
             this.ch = ch;
-            this.nodeId = Objects.hash(id.userId, id.timestamp);
+            this.nodeId = id.id;
         }
 
         @Override
@@ -76,17 +78,17 @@ public class TreeCRDT implements CRDT {
                 return false;
             }
             CRDTNode node = (CRDTNode) o;
-            return nodeId == node.nodeId;
+            return Objects.equals(nodeId, node.nodeId);
         }
 
         @Override
         public int hashCode() {
-            return nodeId;
+            return nodeId.hashCode();
         }
     }
 
-    private final Map<CharacterID, CRDTNode> idNodeMap = new ConcurrentHashMap<>();
-    private final CRDTNode root = new CRDTNode(new CharacterID(-1, Long.MAX_VALUE), null);
+    private final Map<String, CRDTNode> idNodeMap = new ConcurrentHashMap<>();
+    private final CRDTNode root = new CRDTNode(new CharacterID(-1, Long.MAX_VALUE, "-1"), null);
     private final ReentrantLock lock = new ReentrantLock();
 
     // Track history for each user (max 10 operations per user for undo)
@@ -108,22 +110,27 @@ public class TreeCRDT implements CRDT {
     }
 
     @Override
-    public Operation insert(int parentId, Character ch, int userId) {
+    public Operation insert(String parentId, Character ch, int userId) {
+        return insert(parentId, ch, userId, null);
+    }
+    
+    public Operation insert(String parentId, Character ch, int userId, String characterId) {
         lock.lock();
         try {
             long timestamp = System.currentTimeMillis();
-            CharacterID id = new CharacterID(userId, timestamp);
+            String charId = characterId != null ? characterId : userId + "-" + timestamp;
+            CharacterID id = new CharacterID(userId, timestamp, charId);
             CRDTNode node = new CRDTNode(id, ch);
 
-            CRDTNode parent = parentId == -1 ? root : findNodeById(parentId);
+            CRDTNode parent = "-1".equals(parentId) ? root : findNodeById(parentId);
             if (parent == null) {
                 parent = root; // Default to root if parent not found
             }
 
             parent.children.add(node);
-            idNodeMap.put(id, node);
+            idNodeMap.put(charId, node);
 
-            Operation op = new Operation(Operation.Type.INSERT, parentId, ch, userId, timestamp);
+            Operation op = new Operation(Operation.Type.INSERT, parentId, ch, userId, timestamp, charId);
             addToHistory(userId, op);
             return op;
         } finally {
@@ -132,20 +139,25 @@ public class TreeCRDT implements CRDT {
     }
 
     @Override
-    public List<Operation> insertText(int parentId, String text, int userId) {
+    public List<Operation> insertText(String parentId, String text, int userId, List<String> characterIds) {
         if (text == null || text.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Operation> operations = new ArrayList<>();
-        int currentParentId = parentId;
+        String currentParentId = parentId;
 
         lock.lock();
         try {
             for (int i = 0; i < text.length(); i++) {
-                Operation op = insert(currentParentId, text.charAt(i), userId);
+                // Use provided character ID if available, otherwise generate one
+                String characterId = (characterIds != null && i < characterIds.size()) 
+                    ? characterIds.get(i) 
+                    : userId + "-" + System.currentTimeMillis() + "-" + i;
+                
+                Operation op = insert(currentParentId, text.charAt(i), userId, characterId);
                 operations.add(op);
-                currentParentId = Objects.hash(userId, op.getTimestamp()); // Use the new node as parent for next character
+                currentParentId = op.getCharacterId();
             }
             return operations;
         } finally {
@@ -154,7 +166,13 @@ public class TreeCRDT implements CRDT {
     }
 
     @Override
-    public Operation delete(int charId, int userId) {
+    public List<Operation> insertText(String parentId, String text, int userId) {
+        // Use the new method with null characterIds for backward compatibility
+        return insertText(parentId, text, userId, null);
+    }
+
+    @Override
+    public Operation delete(String charId, int userId) {
         lock.lock();
         try {
             CRDTNode node = findNodeById(charId);
@@ -179,7 +197,7 @@ public class TreeCRDT implements CRDT {
         }
 
         if (op.getType() == Operation.Type.INSERT) {
-            insert(op.getPosition(), op.getText(), op.getuserId());
+            insert(op.getPosition(), op.getText(), op.getuserId(), op.getCharacterId());
         } else if (op.getType() == Operation.Type.DELETE) {
             delete(op.getPosition(), op.getuserId());
         }
@@ -198,10 +216,10 @@ public class TreeCRDT implements CRDT {
     }
 
     @Override
-    public List<Integer> getCharacterIds() {
+    public List<String> getCharacterIds() {
         lock.lock();
         try {
-            List<Integer> ids = new ArrayList<>();
+            List<String> ids = new ArrayList<>();
             collectIds(root, ids);
             return ids;
         } finally {
@@ -209,7 +227,7 @@ public class TreeCRDT implements CRDT {
         }
     }
 
-    private void collectIds(CRDTNode node, List<Integer> ids) {
+    private void collectIds(CRDTNode node, List<String> ids) {
         if (node != root && !node.isDeleted) {
             ids.add(node.nodeId);
         }
@@ -220,7 +238,6 @@ public class TreeCRDT implements CRDT {
     }
 
     private void traverseTree(CRDTNode node, StringBuilder sb) {
-        // No need to sort since the TreeSet already sorts by the compareTo method
         for (CRDTNode child : node.children) {
             if (!child.isDeleted) {
                 sb.append(child.ch);
@@ -241,20 +258,17 @@ public class TreeCRDT implements CRDT {
 
             Operation op = ops.pop();
             if (op.getType() == Operation.Type.INSERT) {
-                // Find the node and mark it as deleted
-                CRDTNode node = findNodeById(Objects.hash(userId, op.getTimestamp()));
+                CRDTNode node = findNodeById(op.getCharacterId());
                 if (node != null) {
                     node.isDeleted = true;
                 }
             } else if (op.getType() == Operation.Type.DELETE) {
-                // Find the node and unmark it as deleted
                 CRDTNode node = findNodeById(op.getPosition());
                 if (node != null) {
                     node.isDeleted = false;
                 }
             }
 
-            // Push to redo stack
             redoStack.computeIfAbsent(userId, k -> new ArrayDeque<>()).push(op);
             return true;
         } finally {
@@ -274,20 +288,17 @@ public class TreeCRDT implements CRDT {
 
             Operation op = redo.pop();
             if (op.getType() == Operation.Type.INSERT) {
-                // Find the node and unmark it as deleted
-                CRDTNode node = findNodeById(Objects.hash(userId, op.getTimestamp()));
+                CRDTNode node = findNodeById(op.getCharacterId());
                 if (node != null) {
                     node.isDeleted = false;
                 }
             } else if (op.getType() == Operation.Type.DELETE) {
-                // Find the node and mark it as deleted
                 CRDTNode node = findNodeById(op.getPosition());
                 if (node != null) {
                     node.isDeleted = true;
                 }
             }
 
-            // Push back to history
             addToHistory(userId, op);
             return true;
         } finally {
@@ -295,19 +306,14 @@ public class TreeCRDT implements CRDT {
         }
     }
 
-    // Helper methods
-    private CRDTNode findNodeById(int nodeId) {
-        return idNodeMap.values().stream()
-                .filter(n -> n.nodeId == nodeId)
-                .findFirst()
-                .orElse(null);
+    private CRDTNode findNodeById(String nodeId) {
+        return idNodeMap.get(nodeId);
     }
 
     private void addToHistory(int userId, Operation operation) {
         Deque<Operation> userHistory = history.computeIfAbsent(userId, k -> new ArrayDeque<>());
         userHistory.push(operation);
 
-        // Keep only MAX_HISTORY operations per user
         while (userHistory.size() > MAX_HISTORY) {
             userHistory.removeLast();
         }

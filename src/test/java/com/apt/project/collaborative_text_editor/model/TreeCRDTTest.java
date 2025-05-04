@@ -2,6 +2,7 @@ package com.apt.project.collaborative_text_editor.model;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -246,5 +247,119 @@ class TreeCRDTTest {
             // Expected text after deletion: "Ahmed esham Sayed"
             assertEquals("Ahmed esham Sayed", crdt.getDocument());
         }
+    }
+
+    @Test
+    void testInsertWithFrontendProvidedCharacterId() {
+        // Test inserting a character with a frontend-provided ID
+        String frontendCharId = "frontend-char-id-1";
+        Operation op = crdt.insert("-1", 'A', 1, frontendCharId);
+        
+        // Verify operation properties
+        assertNotNull(op);
+        assertEquals(Operation.Type.INSERT, op.getType());
+        assertEquals("-1", op.getPosition());
+        assertEquals('A', op.getText());
+        assertEquals(1, op.getuserId());
+        assertEquals(frontendCharId, op.getCharacterId());
+        
+        // Verify document content
+        assertEquals("A", crdt.getDocument());
+        
+        // Verify the character ID is in the list of IDs
+        List<String> ids = crdt.getCharacterIds();
+        assertEquals(1, ids.size());
+        assertEquals(frontendCharId, ids.get(0));
+    }
+    
+    @Test
+    void testInsertWithPreviousFrontendIdAsParent() {
+        // First insertion with frontend ID
+        String firstCharId = "first-char-id";
+        Operation firstOp = crdt.insert("-1", 'A', 1, firstCharId);
+        
+        String secondCharId = "second-char-id";
+        Operation secondOp = crdt.insert(firstCharId, 'B', 1, secondCharId);
+        
+        assertEquals(firstCharId, secondOp.getPosition());
+        assertEquals(secondCharId, secondOp.getCharacterId());
+        
+        assertEquals("AB", crdt.getDocument());
+    }
+    
+    @Test
+    void testSequentialInsertionsWithFrontendIds() {
+        // Create a series of frontend character IDs
+        String[] charIds = {"char-1", "char-2", "char-3", "char-4", "char-5"};
+        String text = "Hello";
+        
+        // Start with the root as parent
+        String parentId = "-1";
+        
+        // Insert each character with its own ID and the previous character as parent
+        for (int i = 0; i < text.length(); i++) {
+            Operation op = crdt.insert(parentId, text.charAt(i), 1, charIds[i]);
+            parentId = op.getCharacterId(); // Use the current character as parent for the next insertion
+        }
+        
+        // Verify the document content - should be in correct order because of parent-child relationships
+        assertEquals("Hello", crdt.getDocument());
+        
+        // Verify all character IDs are present
+        List<String> ids = crdt.getCharacterIds();
+        assertEquals(text.length(), ids.size());
+        for (String charId : charIds) {
+            assertTrue(ids.contains(charId));
+        }
+    }
+    
+    @Test
+    void testBatchInsertWithFrontendIds() {
+        // Create a list of character IDs for batch insertion
+        List<String> charIds = new ArrayList<>();
+        charIds.add("batch-1");
+        charIds.add("batch-2");
+        charIds.add("batch-3");
+        charIds.add("batch-4");
+        charIds.add("batch-5");
+        
+        // Insert text with provided character IDs
+        List<Operation> ops = crdt.insertText("-1", "World", 1, charIds);
+        
+        // Verify operations
+        assertEquals(5, ops.size());
+        for (int i = 0; i < ops.size(); i++) {
+            assertEquals(charIds.get(i), ops.get(i).getCharacterId());
+        }
+        
+        // Verify document content
+        assertEquals("World", crdt.getDocument());
+        
+        // Verify character IDs are in the document
+        List<String> documentIds = crdt.getCharacterIds();
+        for (String charId : charIds) {
+            assertTrue(documentIds.contains(charId));
+        }
+    }
+    
+    @Test
+    void testMixedAutomaticAndFrontendIds() {
+        // Insert first character with automatic ID
+        Operation auto1 = crdt.insert("-1", 'A', 1);
+        
+        // Insert second character with frontend ID using first character as parent
+        String frontendId = "frontend-id-1";
+        Operation frontend1 = crdt.insert(auto1.getCharacterId(), 'B', 1, frontendId);
+        
+        // Insert third character with automatic ID using frontend character as parent
+        Operation auto2 = crdt.insert(frontendId, 'C', 1);
+        
+        // Verify the chain of parent-child relationships
+        assertEquals("-1", auto1.getPosition());
+        assertEquals(auto1.getCharacterId(), frontend1.getPosition());
+        assertEquals(frontendId, auto2.getPosition());
+        
+        // The traversal order should reflect the parent-child relationships
+        assertEquals("ABC", crdt.getDocument());
     }
 }

@@ -31,15 +31,27 @@ public class Document implements Serializable {
     
     // Document editing operations
     
-    public Operation insertCharacter(int parentId, Character ch, int userId) {
+    // For backward compatibility 
+    public Operation insertCharacter(String parentId, Character ch, int userId) {
         return content.insert(parentId, ch, userId);
     }
     
-    public List<Operation> insertText(int parentId, String text, int userId) {
+    // New method with characterId parameter
+    public Operation insertCharacter(String parentId, Character ch, int userId, String characterId) {
+        return content.insert(parentId, ch, userId, characterId);
+    }
+    
+    // For backward compatibility
+    public List<Operation> insertText(String parentId, String text, int userId) {
         return content.insertText(parentId, text, userId);
     }
     
-    public Operation deleteCharacter(int charId, int userId) {
+    // New method with characterIds parameter
+    public List<Operation> insertText(String parentId, String text, int userId, List<String> characterIds) {
+        return content.insertText(parentId, text, userId, characterIds);
+    }
+    
+    public Operation deleteCharacter(String charId, int userId) {
         return content.delete(charId, userId);
     }
     
@@ -88,7 +100,7 @@ public class Document implements Serializable {
         return content.getDocument();
     }
     
-    public List<Integer> getCharacterIds() {
+    public List<String> getCharacterIds() {
         return content.getCharacterIds();
     }
 }
