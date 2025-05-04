@@ -64,6 +64,8 @@ public class Document implements Serializable {
     }
     
     public void applyOperation(Operation operation) {
+        System.out.println("in the Document.java apply operation called with operation : " + operation.toString());
+
         content.apply(operation);
     }
     

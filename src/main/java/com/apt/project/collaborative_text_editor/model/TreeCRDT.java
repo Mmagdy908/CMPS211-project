@@ -253,6 +253,8 @@ public class TreeCRDT implements CRDT {
 
     @Override
     public void apply(Operation op) {
+        System.out.println("in the TreeCRDT.java apply operation called with operation : " + op.toString());
+
         if (op == null) {
             debug("apply", "Operation is null, ignoring");
             return;

@@ -97,6 +97,7 @@ public class DocumentController {
     public ResponseEntity<Void> applyOperation(
             @PathVariable String id,
             @RequestBody Operation operation) {
+                System.out.println("in the controller apply operation called with operation : " + operation.toString());
         documentService.applyOperation(id, operation);
         return ResponseEntity.ok().build();
     }

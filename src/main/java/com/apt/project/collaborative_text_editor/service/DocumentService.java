@@ -103,6 +103,8 @@ public class DocumentService {
 
     // Apply operations from remote users
     public void applyOperation(String documentId, Operation operation) {
+        System.out.println("in the service apply operation called with operation : " + operation.toString());
+
         Document document = documents.get(documentId);
         if (document != null) {
             document.applyOperation(operation);
