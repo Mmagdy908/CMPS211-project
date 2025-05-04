@@ -9,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class User   {
-    private String id;
+    private int id;
     private String username;
     private int cursorPosition;
 }

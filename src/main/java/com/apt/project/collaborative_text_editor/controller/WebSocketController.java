@@ -145,6 +145,7 @@ public class WebSocketController {
         }catch(Exception e){
             Message errorMessage=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
             // return errorMessage;
+            System.out.println("hekl");
             messagingTemplate.convertAndSend("/topic/session/"+sessionId , errorMessage);
 
         }

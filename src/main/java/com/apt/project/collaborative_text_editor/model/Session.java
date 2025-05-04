@@ -54,7 +54,7 @@ public class Session {
         if (editors.size() == MAX_EDITORS) {
             throw new Exception("Max number of editors is reached");
         }
-        boolean exists = editors.stream().anyMatch(u -> u.getId().equals(user.getId())); 
+        boolean exists = editors.stream().anyMatch(u -> u.getId()==(user.getId())); 
         if (!exists) {
             editors.add(user);
         }
@@ -62,18 +62,18 @@ public class Session {
 
     public void addViewer(User user) throws Exception{
            // TODO 
-           boolean exists = viewers.stream().anyMatch(u -> u.getId().equals(user.getId()));
+           boolean exists = viewers.stream().anyMatch(u -> u.getId()==(user.getId()));
            if (!exists) {
             viewers.add(user);
         }
     }
 
     public boolean isEditor(User user) {
-        return editors.stream().anyMatch(u -> u.getId().equals(user.getId()));
+        return editors.stream().anyMatch(u -> u.getId()==(user.getId()));
     }
 
     public boolean isViewer(User user) {
-        return viewers.stream().anyMatch(u -> u.getId().equals(user.getId()));
+        return viewers.stream().anyMatch(u -> u.getId()==(user.getId()));
     }
 
     public void edit(Operation op,User sender){

@@ -33,6 +33,7 @@ var content = null;
 var characterIds = [];
 var editors;
 var viewers;
+let charIds = 0;
 
 var colors = [
   "#2196F3",
@@ -173,12 +174,14 @@ function editDocument(event) {
   const { inputType, data } = event;
   const selectionStart = editor.selectionStart;
   const parentId = selectionStart === 0 ? -1 : characterIds[selectionStart - 1];
+  const characterId = `${me.id}:${charIds++}`;
 
   console.log(selectionStart, parentId, data, content);
   console.log(characterIds);
   const selectionEnd = editor.selectionEnd;
   console.log("my current pos:", me.cursorPosition);
   if (inputType === "insertText") {
+    characterIds.splice(selectionStart, 0, characterId);
     stompClient.send(
       `/app/session/${sessionId}/edit`,
       {},
@@ -188,12 +191,16 @@ function editDocument(event) {
           type: "INSERT",
           parentId,
           ch: data,
-          userId: 1,
+          userId: me.id,
+          characterId,
           timestamp: Date.now(),
         },
       })
     );
   } else if (inputType === "deleteContentBackward") {
+    if (selectionStart === 0) return;
+    characterIds.splice(selectionStart - 1, 1);
+
     stompClient.send(
       `/app/session/${sessionId}/edit`,
       {},
@@ -203,7 +210,7 @@ function editDocument(event) {
           type: "DELETE",
           parentId,
           ch: data,
-          userId: 1,
+          userId: me.id,
           timestamp: Date.now(),
         },
       })
@@ -267,6 +274,8 @@ function onMessageReceived(payload) {
     updateCursorPosition();
     console.log(`Updating Cursors...`);
   } else if (message.type === "UPDATE") {
+    if (message.sender.id === me.id) return;
+
     updateDocument(message.content, message.characterIds);
     editors = message.editors;
     updateCursorPosition();

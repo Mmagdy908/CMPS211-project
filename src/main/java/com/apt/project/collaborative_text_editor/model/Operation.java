@@ -36,6 +36,9 @@ public class Operation implements Serializable {
         this(type, parentId, ch, userId, timestamp, null);
     }
 
+    public Operation() {
+    }
+
     public Type getType() {
         return type;
     }

@@ -14,6 +14,8 @@ import com.apt.project.collaborative_text_editor.Utility;
 
 @RestController
 public class HTTPController {
+    int ids=0;
+
     @GetMapping("/")
     public String hello(){
         return "Hello from the server";
@@ -21,7 +23,7 @@ public class HTTPController {
 
     @PostMapping("/users")
     @CrossOrigin(origins = "*")
-    public String create( String username) throws IOException {
-        return new Utility().generateUniqueId();
+    public int create( String username) throws IOException {
+        return ids++;
     }
 }
