@@ -22,27 +22,53 @@ public class Session {
     private Vector<String> viewers;
     private static int MAX_EDITORS=4;
 
-    // TODO
+    // Add fields for codes
+    private String editorCode;
+    private String viewerCode;
+
+    // TODO add logic
     // editor, viewer codes
     public Session(){
         id=new Utility().generateUniqueId();
         document=new Document();
         editors=new Vector<String>();
         viewers=new Vector<String>();
+
+        // Assign codes from the document
+        this.editorCode = document.getEditorCode();
+        this.viewerCode = document.getViewerCode();
     }
 
-    //TODO
+    //TODO add logic
     public void addEditor(String userId) throws Exception{
-        if(editors.size()==MAX_EDITORS){
+        // if(editors.size()==MAX_EDITORS){
+        //     throw new Exception("Max number of editors is reached");
+        // }else{
+        //     editors.add(userId);
+        // }
+
+        if (editors.size() == MAX_EDITORS) {
             throw new Exception("Max number of editors is reached");
-        }else{
+        } else if (!editors.contains(userId)) {
             editors.add(userId);
         }
     }
 
     public void addViewer(String userId) throws Exception{
-           // TODO
+           // TODO 
+           if (!viewers.contains(userId)) {
+            viewers.add(userId);
+        }
     }
+
+    public boolean isEditor(String userId) {
+        return editors.contains(userId);
+    }
+
+    public boolean isViewer(String userId) {
+        return viewers.contains(userId);
+    }
+
 
     public void edit(Operation op){
         document.applyOperation(op);
@@ -54,4 +80,5 @@ public class Session {
     public List<Integer> getCharacterIds(){
        return document.getCharacterIds();
     }
+    
 }

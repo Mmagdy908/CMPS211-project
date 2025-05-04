@@ -1,7 +1,7 @@
 "use strict";
 
-// const URL = "http://192.168.1.3:3000";
-const URL = "http://localhost:3000";
+const URL = "http://192.168.1.5:3000";
+//const URL = "http://localhost:3000";
 var usernamePage = document.querySelector("#username-page");
 var chatPage = document.querySelector("#doc-page");
 var createBtn = document.querySelector(".create");
@@ -15,6 +15,13 @@ var messageArea = document.querySelector("#editor");
 var connectingElement = document.querySelector(".connecting");
 const editor = document.getElementById("editor");
 const log = document.getElementById("log");
+
+let activeUsers = [];            // [{ userId, name, color }]
+const usersUl = document.getElementById("users");
+const editorCodeSpan = document.getElementById("editor-code");
+const viewerCodeSpan = document.getElementById("viewer-code");
+const undoButton = document.getElementById("undo-button");
+const redoButton = document.getElementById("redo-button");
 
 var stompClient = null;
 var username = null;
@@ -70,13 +77,35 @@ function createSession(event) {
   chatPage.classList.remove("hidden");
 }
 
+// function joinSession(event) {
+//   event.preventDefault();
+//   stompClient.send(
+//     "/app/session/join",
+//     {},
+//     JSON.stringify({ senderId: userId })
+//   );
+//   usernamePage.classList.add("hidden");
+//   chatPage.classList.remove("hidden");
+// }
+
 function joinSession(event) {
   event.preventDefault();
+
+  const code = document.querySelector("#code").value.trim();
+  if (!code) {
+    alert("Please enter an editor‑ or viewer‑code");
+    return;
+  }
+
   stompClient.send(
     "/app/session/join",
-    {},
-    JSON.stringify({ senderId: userId })
+    {}, 
+    JSON.stringify({
+      senderId: userId,
+      content: code 
+    })
   );
+
   usernamePage.classList.add("hidden");
   chatPage.classList.remove("hidden");
 }
@@ -188,22 +217,46 @@ function onMessageReceived(payload) {
 
   if (message.type == "CREATE") {
     sessionId = message.sessionId;
+
+    if (message.editorCode) {
+      editorCodeSpan.textContent = message.editorCode;
+      viewerCodeSpan.textContent = message.viewerCode;
+    }
+    
     stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
     console.log(`User: ${userId} created session: ${sessionId}`);
   } else if (message.type === "JOIN") {
     sessionId = message.sessionId;
+
+    if (message.isViewer) {
+      editor.setAttribute("disabled", "disabled");
+    }
+
     stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
     messageElement.classList.add("event-message");
+
+    addUser(message.senderId);
     console.log(
       `User (${message.senderId}) joined session (${message.sessionId})`
     );
+
+  } else if (message.type === "CURSOR") {
+    // removeUser(message.senderId);
+    showRemoteCursor(message.cursor);
+
   } else if (message.type === "UPDATE") {
     updateDocument(message.content, message.characterIds);
 
     console.log(`Updating Document...`);
   } else if (message.type === "LEAVE") {
-    messageElement.classList.add("event-message");
-    message.content = message.sender + " left!";
+    // messageElement.classList.add("event-message");
+    // message.content = message.sender + " left!";
+    removeUser(message.senderId);
+
+  } else if (message.type === "PRESENCE") {
+    setActiveUsers(message.activeUsers);
+
+    console.log(`Updating Document...`);
   } else {
     // messageElement.classList.add("chat-message");
     // var avatarElement = document.createElement("i");
@@ -226,6 +279,86 @@ function onMessageReceived(payload) {
   messageArea.appendChild(messageElement);
   messageArea.scrollTop = messageArea.scrollHeight;
 }
+
+// function setActiveUsers(list) {
+//   activeUsers = list.map((u,i) => ({
+//     userId: u.userId,
+//     name: u.name,
+//     color: colors[i % colors.length]
+//   }));
+//   renderUserList();
+// }
+
+function setActiveUsers(listOfUserIds) {
+  // listOfUserIds is e.g. ["u1","u2","u3"]
+  activeUsers = listOfUserIds.map((uid, i) => ({
+    userId: uid,
+    name: uid,                              // display the id as the name
+    color: colors[i % colors.length]
+  }));
+  renderUserList();
+}
+
+function addUser(userId) {
+  if (!activeUsers.find(u=>u.userId===userId)) {
+    activeUsers.push({ userId, name: userId, color: colors[activeUsers.length % colors.length] });
+    renderUserList();
+  }
+}
+
+function removeUser(userId) {
+  activeUsers = activeUsers.filter(u=>u.userId!==userId);
+      messageElement.classList.add("event-message");
+    message.content = message.sender + " left!";
+  renderUserList();
+}
+
+function renderUserList() {
+  usersUl.innerHTML = "";
+  activeUsers.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u.id;//u.name;
+    li.style.color = u.color;
+    usersUl.appendChild(li);
+  });
+}
+
+
+// whenever caret moves, broadcast it:
+editor.addEventListener("keyup", sendCursor);
+editor.addEventListener("mouseup", sendCursor);
+
+function sendCursor() {
+  if (!sessionId) return;
+  const pos = editor.selectionStart;
+  stompClient.send(
+    `/app/session/${sessionId}/edit`,
+    {},
+    JSON.stringify({
+      senderId: userId,
+      type: "CURSOR",
+      cursor: { position: pos }
+    })
+  );
+}
+
+// show remote cursor by overlaying a marker (simple version updates user‑list)
+function showRemoteCursor({ userId: uid, position }) {
+  // highlight that user in the list with their position
+  const li = Array.from(usersUl.children)
+    .find(li=>li.textContent===uid);
+  if (li) li.textContent = `${uid} @${position}`;
+}
+
+
+
+undoButton.addEventListener("click", () => {
+  fetch(`${URL}/api/documents/${sessionId}/undo?userId=${userId}`, { method: "POST" });
+});
+
+redoButton.addEventListener("click", () => {
+  fetch(`${URL}/api/documents/${sessionId}/redo?userId=${userId}`, { method: "POST" });
+});
 
 function getAvatarColor(messageSender) {
   var hash = 0;
@@ -263,3 +396,39 @@ editor.addEventListener("beforeinput", editDocument);
 //   console.log(editor.value);
 //   if (editor.value === "aaa") editor.selectionStart = editor.selectionEnd = 1;
 // });
+
+// Import/Export handlers
+const importButton = document.getElementById("import-button");
+const importFile = document.getElementById("import-file");
+const exportButton = document.getElementById("export-button");
+
+if (importButton && importFile) {
+  importButton.addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      editor.value = e.target.result;
+      // Optionally, send the imported content to the server as a batch insert
+      // You may want to clear the document and insert all text as new
+      // For now, just update the local editor
+    };
+    reader.readAsText(file);
+  });
+}
+
+if (exportButton) {
+  exportButton.addEventListener("click", () => {
+    const text = editor.value;
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "document.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}

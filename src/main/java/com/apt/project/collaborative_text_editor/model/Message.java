@@ -22,4 +22,8 @@ public class Message {
     private String content;
     private List<Integer> characterIds;
     Operation operation;
+    private String editorCode;
+    private String viewerCode;
+    private List<String> activeUsers;
+    private Integer cursorPosition;
 }
