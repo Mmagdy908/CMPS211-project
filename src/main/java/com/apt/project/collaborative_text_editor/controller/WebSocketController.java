@@ -34,7 +34,17 @@ public class WebSocketController {
            user.setCursorPosition(0);
             String sessionId = sessionService.createSession(user);
             
-            Message message= Message.builder().type(MessageType.CREATE).sender(user).sessionId(sessionId).editors( new Vector<>(Arrays.asList(user))).build();
+            Session session=sessionService.getSession(sessionId);
+
+            Message message= 
+            Message.builder()
+            .type(MessageType.CREATE)
+            .sender(user)
+            .sessionId(sessionId)
+            .editors( new Vector<>(Arrays.asList(user)))
+            .editorCode(session.getEditorCode())
+            .viewerCode(session.getViewerCode())
+            .build();
             messagingTemplate.convertAndSend("/topic/user/" + user.getId(), message);
         } catch (Exception e) {
             Message message=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
@@ -49,15 +59,22 @@ public class WebSocketController {
     public void joinSession(@RequestBody Message message) {
         User user=message.getSender();
         try {
-            String code = message.getEditorCode();
-            if (code == null) {
-                code = message.getViewerCode();
+            String code = message.getCode();
+            if (code == null || code.isBlank()) {
+                throw new Exception("No join‑code provided");
             }
             String sessionId=sessionService.joinSession(user, code);
             Session session = sessionService.getSession(sessionId);
-            Message responseMessage= Message.builder().type(MessageType.JOIN).sender(user)
-            .sessionId(session.getId()).viewers(session.getViewers()).editors(session.getEditors())
-            .build();
+            Message responseMessage= 
+                Message.builder()
+                .type(MessageType.JOIN)
+                .sender(user)
+                .sessionId(session.getId())
+                .viewers(session.getViewers())
+                .editors(session.getEditors())
+                .content(session.getDocumentContent())
+                .characterIds(session.getCharacterIds()) 
+                .build();
 
             messagingTemplate.convertAndSend("/topic/session/"+session.getId(), responseMessage);
             messagingTemplate.convertAndSend("/topic/user/" + user.getId(), responseMessage);
@@ -158,6 +175,8 @@ public class WebSocketController {
 
         }
     }
+
+}
     
 //========================================================================================================//
 //                         Suggested editOrCursor to relay cursor position                                //
@@ -200,4 +219,4 @@ public class WebSocketController {
     // }
 
 
-}
+

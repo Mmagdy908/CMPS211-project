@@ -93,6 +93,14 @@ public class Session {
 
     }
 
+    public String getEditorCode(){
+        return this.editorCode;
+    }
+
+    public String getViewerCode(){
+        return this.viewerCode;
+    }
+
     public String getDocumentContent(){
        return document.getText();
     }

@@ -103,7 +103,7 @@ function joinSession(event) {
 
   stompClient.send("/app/session/join", {},  JSON.stringify({
       sender: me,
-      content: code 
+      code: code 
     }));
 
   usernamePage.classList.add("hidden");
@@ -265,12 +265,12 @@ function onMessageReceived(payload) {
     updateDocument(message.content, message.characterIds);
     editors = message.editors;
     console.log("Editors", editors);
-    updateCursorPosition();
-    console.log(`Updating Document...`);
-  } else if (message.type === "CURSOR") {
-    editors = message.editors;
-    updateCursorPosition();
-    console.log(`Updating Cursors...`);
+    // updateCursorPosition();
+    // console.log(`Updating Document...`);
+  // } else if (message.type === "CURSOR") {
+    // editors = message.editors;
+    // updateCursorPosition();
+    // console.log(`Updating Cursors...`);
   } else if (message.type === "LEAVE") {
     // messageElement.classList.add("event-message");
     // message.content = message.sender.id + " left!";
@@ -336,11 +336,22 @@ function removeUser(userId) {
   renderUserList();
 }
 
+// function renderUserList() {
+//   usersUl.innerHTML = "";
+//   activeUsers.forEach(u => {
+//     const li = document.createElement("li");
+//     li.textContent = u.id;//u.name;
+//     li.style.color = u.color;
+//     usersUl.appendChild(li);
+//   });
+// }
+
 function renderUserList() {
   usersUl.innerHTML = "";
   activeUsers.forEach(u => {
     const li = document.createElement("li");
-    li.textContent = u.id;//u.name;
+    // display the username rather than raw id
+    li.textContent = u.name;
     li.style.color = u.color;
     usersUl.appendChild(li);
   });
@@ -449,6 +460,23 @@ const importButton = document.getElementById("import-button");
 const importFile = document.getElementById("import-file");
 const exportButton = document.getElementById("export-button");
 
+// if (importButton && importFile) {
+//   importButton.addEventListener("click", () => importFile.click());
+//   importFile.addEventListener("change", (event) => {
+//     const file = event.target.files[0];
+//     if (!file) return;
+//     const reader = new FileReader();
+//     reader.onload = function (e) {
+//       editor.value = e.target.result;
+//       // Optionally, send the imported content to the server as a batch insert
+//       // You may want to clear the document and insert all text as new
+//       // For now, just update the local editor
+//     };
+//     reader.readAsText(file);
+//   });
+// }
+
+
 if (importButton && importFile) {
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", (event) => {
@@ -456,18 +484,55 @@ if (importButton && importFile) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function (e) {
-      editor.value = e.target.result;
-      // Optionally, send the imported content to the server as a batch insert
-      // You may want to clear the document and insert all text as new
-      // For now, just update the local editor
+      const text = e.target.result;
+      // clear local editor
+      editor.value = '';
+      // send each character as an individual operation
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        // update local view immediately (optional)
+        editor.value += ch;
+        // send each character insertion to server
+        const parentId = i === 0 ? -1 : characterIds[i - 1] || -1;
+        stompClient.send(
+          `/app/session/${sessionId}/edit`,
+          {},
+          JSON.stringify({
+            sender: me,
+            operation: {
+              type: "INSERT",
+              parentId: parentId,
+              ch: ch,
+              userId: me.id,
+              timestamp: Date.now()
+            }
+          })
+        );
+      }
     };
     reader.readAsText(file);
   });
 }
 
+// if (exportButton) {
+//   exportButton.addEventListener("click", () => {
+//     const text = editor.value;
+//     const blob = new Blob([text], { type: "text/plain" });
+//     const url = URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.href = url;
+//     a.download = "document.txt";
+//     document.body.appendChild(a);
+//     a.click();
+//     document.body.removeChild(a);
+//     URL.revokeObjectURL(url);
+//   });
+// }
+
 if (exportButton) {
   exportButton.addEventListener("click", () => {
-    const text = editor.value;
+    // use the latest collaborative content variable
+    const text = content != null ? content : editor.value;
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
