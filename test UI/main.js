@@ -181,6 +181,7 @@ function editDocument(event) {
   const selectionEnd = editor.selectionEnd;
   console.log("my current pos:", me.cursorPosition);
   if (inputType === "insertText") {
+    const characterId = `${me.id}:${charIds++}`;
     characterIds.splice(selectionStart, 0, characterId);
     stompClient.send(
       `/app/session/${sessionId}/edit`,
@@ -198,6 +199,23 @@ function editDocument(event) {
       })
     );
   } else if (inputType === "insertFromPaste") {
+    const characterIdList = data.split("").map((_) => `${me.id}:${charIds++}`);
+    characterIds.splice(selectionStart, 0, ...characterIdList);
+    stompClient.send(
+      `/app/session/${sessionId}/edit`,
+      {},
+      JSON.stringify({
+        sender: me,
+        operation: {
+          type: "INSERT",
+          parentId,
+          ch: data,
+          userId: 1,
+          characterId,
+          timestamp: Date.now(),
+        },
+      })
+    );
   } else if (inputType === "deleteContentBackward") {
     if (selectionStart === 0) return;
     characterIds.splice(selectionStart - 1, 1);
@@ -223,7 +241,7 @@ function editDocument(event) {
 }
 
 function updateCursorPosition() {
-  const user = editors.find((editor) => editor.id === me.id);
+  const user = editors.find((editor) => editor.id == me.id);
   if (user.cursorPosition !== editor.selectionStart) {
     me.cursorPosition = user.cursorPosition;
     editor.selectionStart = editor.selectionEnd = user.cursorPosition;
@@ -440,13 +458,15 @@ function editCursorPosition(event) {
   ) {
     return;
   }
+
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
 
   // console.log(editors);
-
-  const user = editors.find((user) => user.id === me.id);
+  const user = editors.find((user) => user.id == me.id);
   if (user) {
+    console.log("jeeee");
+
     me.cursorPosition = user.cursorPosition = start;
     stompClient.send(
       `/app/session/${sessionId}/update-cursor`,
