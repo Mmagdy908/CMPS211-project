@@ -24,6 +24,8 @@ public class Session {
     private Vector<User> editors;
     private Vector<User> viewers;
     private static int MAX_EDITORS=4;
+    private String editorCode;
+    private String viewerCode;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -51,24 +53,27 @@ public class Session {
 
         if (editors.size() == MAX_EDITORS) {
             throw new Exception("Max number of editors is reached");
-        } else if (!editors.contains(userId)) {
+        }
+        boolean exists = editors.stream().anyMatch(u -> u.getId().equals(user.getId())); 
+        if (!exists) {
             editors.add(user);
         }
     }
 
     public void addViewer(User user) throws Exception{
            // TODO 
-           if (!viewers.contains(userId)) {
-            viewers.add(userId);
+           boolean exists = viewers.stream().anyMatch(u -> u.getId().equals(user.getId()));
+           if (!exists) {
+            viewers.add(user);
         }
     }
 
-    public boolean isEditor(String userId) {
-        return editors.contains(userId);
+    public boolean isEditor(User user) {
+        return editors.stream().anyMatch(u -> u.getId().equals(user.getId()));
     }
 
-    public boolean isViewer(String userId) {
-        return viewers.contains(userId);
+    public boolean isViewer(User user) {
+        return viewers.stream().anyMatch(u -> u.getId().equals(user.getId()));
     }
 
     public void edit(Operation op,User sender){

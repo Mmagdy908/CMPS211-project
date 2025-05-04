@@ -49,11 +49,7 @@ public class SessionService {
 
     // TODO
     // COMPLETE LOGIC
-    public Session joinSession(User user,String code) throws Exception{
-        Session session=activeSessions.get(lastSession.getId());
-        session.addEditor(user);
-        return session;
-    public String joinSession(String userId, String code) throws Exception {
+    public String joinSession(User user, String code) throws Exception {
         // Session session=activeSessions.get(lastSession);
         // session.addEditor(userId);
         // return lastSession;
@@ -68,11 +64,13 @@ public class SessionService {
             throw new Exception("Invalid code");
         Session session = activeSessions.get(sessionId);
         if (isEditor)
-            session.addEditor(userId);
+            session.addEditor(user);
         else
-            session.addViewer(userId);
+            session.addViewer(user);
         return sessionId;
     }
+
+
 
     public Message editDocument(Operation op, String sessionId, User sender) throws Exception{
         lock.lock();
@@ -107,12 +105,21 @@ public class SessionService {
         return activeSessions.get(sessionId);
     }
 
-    public List<String> getParticipants(String sessionId) {
+    public List<User> getParticipants(String sessionId) {
         Session s = activeSessions.get(sessionId);
-        List<String> all = new ArrayList<>();
+        List<User> all = new ArrayList<>();
         all.addAll(s.getEditors());
         all.addAll(s.getViewers());
         return all;
+    }
+
+    public Vector<User> getEditors(String sessionId) {
+        Session s = activeSessions.get(sessionId);
+        return s.getEditors();
+    }
+    public Vector<User> getViewers(String sessionId) {
+        Session s = activeSessions.get(sessionId);
+        return s.getViewers();
     }
 
 }

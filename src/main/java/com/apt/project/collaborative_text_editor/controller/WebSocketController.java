@@ -49,8 +49,12 @@ public class WebSocketController {
     public void joinSession(@RequestBody Message message) {
         User user=message.getSender();
         try {
-            Session session=sessionService.joinSession(user, null);
-
+            String code = message.getEditorCode();
+            if (code == null) {
+                code = message.getViewerCode();
+            }
+            String sessionId=sessionService.joinSession(user, code);
+            Session session = sessionService.getSession(sessionId);
             Message responseMessage= Message.builder().type(MessageType.JOIN).sender(user)
             .sessionId(session.getId()).viewers(session.getViewers()).editors(session.getEditors())
             .build();
@@ -66,7 +70,7 @@ public class WebSocketController {
     // TODO
     // takes user id
     @MessageMapping("/session/{sessionId}/leave")
-    public void leaveSession(@RequestBody String userId, @DestinationVariable String sessionId) {
+    public void leaveSession(@RequestBody User user, @DestinationVariable String sessionId) {
         // try {
         // } catch (Exception e) {
         // }
@@ -75,24 +79,26 @@ public class WebSocketController {
         try {
             Message leaveMessage = Message.builder()
                     .type(MessageType.LEAVE)
-                    .senderId(userId)
+                    .sender(user)
                     .sessionId(sessionId)
-                    .content(userId + " left the session.")
+                    .content(user.getId() + " left the session.")
                     .build();
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, leaveMessage);
 
             // broadcast updated presence
-            List<String> participants = sessionService.getParticipants(sessionId);
+            Vector<User> editors = sessionService.getEditors(sessionId);
+            Vector<User> viewers = sessionService.getViewers(sessionId);
             Message pres = Message.builder()
                     .type(MessageType.PRESENCE)
                     .sessionId(sessionId)
-                    .activeUsers(participants)
+                    .editors(editors)
+                    .viewers(viewers)
                     .build();
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, pres);
         } catch (Exception e) {
             Message errorMessage = Message.builder()
                     .type(MessageType.ERROR)
-                    .senderId(userId)
+                    .sender(user)
                     .error(e.getMessage())
                     .build();
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, errorMessage);
