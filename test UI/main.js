@@ -191,12 +191,13 @@ function editDocument(event) {
           type: "INSERT",
           parentId,
           ch: data,
-          userId: me.id,
+          userId: 1,
           characterId,
           timestamp: Date.now(),
         },
       })
     );
+  } else if (inputType === "insertFromPaste") {
   } else if (inputType === "deleteContentBackward") {
     if (selectionStart === 0) return;
     characterIds.splice(selectionStart - 1, 1);
@@ -210,7 +211,7 @@ function editDocument(event) {
           type: "DELETE",
           parentId,
           ch: data,
-          userId: me.id,
+          userId: +me.id,
           timestamp: Date.now(),
         },
       })
