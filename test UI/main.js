@@ -24,11 +24,15 @@ const undoButton = document.getElementById("undo-button");
 const redoButton = document.getElementById("redo-button");
 
 var stompClient = null;
-var username = null;
-var userId = null;
+var userN = 0;
+var ids = 0;
+var me = null;
+
 var sessionId = null;
 var content = null;
-var characterIds = null;
+var characterIds = [];
+var editors;
+var viewers;
 
 var colors = [
   "#2196F3",
@@ -46,7 +50,7 @@ function connect(event) {
 
   //   code = document.querySelector("#code").value.trim();
 
-  if (username) {
+  if (me?.username) {
     // usernamePage.classList.add("hidden");
     // chatPage.classList.remove("hidden");
 
@@ -59,12 +63,12 @@ function connect(event) {
 
 function onConnected() {
   // Subscribe to the Public Topic
-  stompClient.subscribe("/topic/user/" + userId, onMessageReceived);
+  stompClient.subscribe("/topic/user/" + me.id, onMessageReceived);
   // Tell your username to the server
   stompClient.send(
     "/app/session/1",
     {},
-    JSON.stringify({ sender: username, type: "REGISTER" })
+    JSON.stringify({ sender: me.username, type: "REGISTER" })
   );
 
   connectingElement.classList.add("hidden");
@@ -72,7 +76,7 @@ function onConnected() {
 
 function createSession(event) {
   event.preventDefault();
-  stompClient.send("/app/session/create", {}, userId);
+  stompClient.send("/app/session/create", {}, JSON.stringify(me));
   usernamePage.classList.add("hidden");
   chatPage.classList.remove("hidden");
 }
@@ -97,14 +101,10 @@ function joinSession(event) {
     return;
   }
 
-  stompClient.send(
-    "/app/session/join",
-    {}, 
-    JSON.stringify({
-      senderId: userId,
+  stompClient.send("/app/session/join", {},  JSON.stringify({
+      sender: me,
       content: code 
-    })
-  );
+    }));
 
   usernamePage.classList.add("hidden");
   chatPage.classList.remove("hidden");
@@ -118,7 +118,7 @@ function onError(error) {
 
 function createUser(event) {
   event.preventDefault();
-  username = usernameInput.value?.trim();
+  const username = usernameInput.value?.trim();
   if (username) {
     fetch(`${URL}/users`, {
       method: "POST",
@@ -134,8 +134,9 @@ function createUser(event) {
         return response.text();
       })
       .then((id) => {
-        userId = id;
-        console.log(`new user id: ${userId}`);
+        me = { id, username };
+
+        console.log(`new user id: ${id}`);
         connect();
       })
       .catch((error) => {
@@ -167,19 +168,18 @@ function updateDocument(newContent, newCharacterIds) {
 function editDocument(event) {
   const { inputType, data } = event;
   const selectionStart = editor.selectionStart;
-  const parentId =
-    !characterIds || selectionStart === 0
-      ? -1
-      : characterIds[selectionStart - 1];
+  const parentId = selectionStart === 0 ? -1 : characterIds[selectionStart - 1];
 
-  console.log(selectionStart);
+  console.log(selectionStart, parentId, data, content);
+  console.log(characterIds);
   const selectionEnd = editor.selectionEnd;
+  console.log("my current pos:", me.cursorPosition);
   if (inputType === "insertText") {
     stompClient.send(
       `/app/session/${sessionId}/edit`,
       {},
       JSON.stringify({
-        senderId: userId,
+        sender: me,
         operation: {
           type: "INSERT",
           parentId,
@@ -194,7 +194,7 @@ function editDocument(event) {
       `/app/session/${sessionId}/edit`,
       {},
       JSON.stringify({
-        senderId: userId,
+        sender: me,
         operation: {
           type: "DELETE",
           parentId,
@@ -208,6 +208,16 @@ function editDocument(event) {
   // console.log(selectionStart, selectionEnd);
   // console.log(editor.value);
   // if (editor.value === "aaa") editor.value = "YEAH";
+}
+
+function updateCursorPosition() {
+  const user = editors.find((editor) => editor.id === me.id);
+  if (user.cursorPosition !== editor.selectionStart) {
+    me.cursorPosition = user.cursorPosition;
+    editor.selectionStart = editor.selectionEnd = user.cursorPosition;
+  }
+
+  console.log(editors);
 }
 
 function onMessageReceived(payload) {
@@ -224,20 +234,27 @@ function onMessageReceived(payload) {
     }
     
     stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
-    console.log(`User: ${userId} created session: ${sessionId}`);
+    editors = message.editors;
+    console.log(`User: ${me.id} created session: ${sessionId}`);
+    me.cursorPosition = 0;
   } else if (message.type === "JOIN") {
-    sessionId = message.sessionId;
+    if (message.sender.id === me.id) {
+      sessionId = message.sessionId;
 
     if (message.isViewer) {
       editor.setAttribute("disabled", "disabled");
     }
 
-    stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
-    messageElement.classList.add("event-message");
+      stompClient.subscribe("/topic/session/" + sessionId, onMessageReceived);
+      messageElement.classList.add("event-message");
 
     addUser(message.senderId);
+    }
+
+    editors = message.editors;
+    viewers = message.viewers;
     console.log(
-      `User (${message.senderId}) joined session (${message.sessionId})`
+      `User (${message.sender.id}) joined session (${message.sessionId})`
     );
 
   } else if (message.type === "CURSOR") {
@@ -246,11 +263,17 @@ function onMessageReceived(payload) {
 
   } else if (message.type === "UPDATE") {
     updateDocument(message.content, message.characterIds);
-
+    editors = message.editors;
+    console.log("Editors", editors);
+    updateCursorPosition();
     console.log(`Updating Document...`);
+  } else if (message.type === "CURSOR") {
+    editors = message.editors;
+    updateCursorPosition();
+    console.log(`Updating Cursors...`);
   } else if (message.type === "LEAVE") {
     // messageElement.classList.add("event-message");
-    // message.content = message.sender + " left!";
+    // message.content = message.sender.id + " left!";
     removeUser(message.senderId);
 
   } else if (message.type === "PRESENCE") {
@@ -375,7 +398,31 @@ codeForm.addEventListener("submit", connect, true);
 // messageForm.addEventListener("submit", sendMessage, true);
 usernameForm.addEventListener("submit", createUser, true);
 editor.addEventListener("beforeinput", editDocument);
+editor.addEventListener("keyup", editCursorPosition);
+editor.addEventListener("mouseup", editCursorPosition);
+editor.addEventListener("focus", editCursorPosition);
+// editor.addEventListener("input", editCursorPosition);
 
+function editCursorPosition() {
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+
+  // console.log(editors);
+
+  const user = editors.find((user) => user.id === me.id);
+  if (user) {
+    me.cursorPosition = user.cursorPosition = start;
+    stompClient.send(
+      `/app/session/${sessionId}/update-cursor`,
+      {},
+      JSON.stringify({
+        sender: me,
+        type: "CURSOR",
+        editors,
+      })
+    );
+  }
+}
 // editor.addEventListener("beforeinput", (e) => {
 //   const { inputType, data } = e;
 //   const selectionStart = editor.selectionStart;

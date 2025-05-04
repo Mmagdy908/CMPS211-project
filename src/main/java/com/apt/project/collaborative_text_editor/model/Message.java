@@ -1,6 +1,7 @@
 package com.apt.project.collaborative_text_editor.model;
 
 import java.util.List;
+import java.util.Vector;
 
 import com.apt.project.collaborative_text_editor.enums.MessageType;
 import lombok.AllArgsConstructor;
@@ -16,14 +17,16 @@ import lombok.Setter;
 @Builder
 public class Message {
     private MessageType type;    
-    private String senderId;
+    private User sender;
     private String sessionId;
     private String error;
     private String content;
     private List<Integer> characterIds;
-    Operation operation;
+    private Operation operation;
+    private Vector<User> editors;
+    private Vector<User> viewers;
     private String editorCode;
     private String viewerCode;
-    private List<String> activeUsers;
+    //private List<String> activeUsers;
     private Integer cursorPosition;
 }
