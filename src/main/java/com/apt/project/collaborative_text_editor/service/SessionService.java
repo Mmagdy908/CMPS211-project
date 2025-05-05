@@ -15,15 +15,14 @@ import com.apt.project.collaborative_text_editor.model.Session;
 import com.apt.project.collaborative_text_editor.model.User;
 
 public class SessionService {
+
     // maps session id -> session
     private final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
 
     // TODO optional
     // MAP editor and viewer codes to sessions
-
     // REMOVE THIS
-
     // public String createSession(String userId) throws Exception{
     // Session session=new Session();
     // String sessionId=session.getId();
@@ -40,7 +39,7 @@ public class SessionService {
         Session session = new Session();
         String sessionId = session.getId();
         session.addEditor(user);
-        
+
         activeSessions.put(sessionId, session);
         editorCodeToSession.put(session.getDocument().getEditorCode(), sessionId);
         viewerCodeToSession.put(session.getDocument().getViewerCode(), sessionId);
@@ -61,50 +60,69 @@ public class SessionService {
             sessionId = viewerCodeToSession.get(code);
             isEditor = false;
         }
-        if (sessionId == null)
+        if (sessionId == null) {
             throw new Exception("Invalid code");
+        }
         Session session = activeSessions.get(sessionId);
-        if (isEditor)
-            session.addEditor(user);
-        else
+        if (isEditor) {
+            session.addEditor(user); 
+        }else {
             session.addViewer(user);
+        }
         return sessionId;
     }
 
-
-
-    public Message editDocument(Message message,String sessionId) throws Exception{
+    public Message editDocument(Message message, String sessionId) throws Exception {
         lock.lock();
-        try{
-            Session session=activeSessions.get(sessionId);
-           
-           
-            session.edit(message);
-            
-            Message responseMessage=Message.builder()
-            .content(session.getDocumentContent())
-            .characterIds(session.getCharacterIds()).editors(session.getEditors())
-            .build();
+        try {
+            Session session = activeSessions.get(sessionId);
+
+            User sender = message.getSender();
+            int increment = 1;
+
+            if (message.getText() == null) {
+                // Single character edit
+                session.getDocument().applyOperation(message.getOperation());
+            } else {
+                // Text paste - handle as a single operation for undo/redo
+                String text = message.getText();
+                increment = text.length();
+                session.getDocument().insertTextAsOperation(
+                        message.getOperation().getPosition(),
+                        text,
+                        sender.getId(),
+                        message.getCharacterIdList()
+                );
+            }
+
+            // Update cursor positions as before
+            for (int i = 0; i < session.getEditors().size(); i++) {
+                // ...existing cursor update code...
+            }
+
+            Message responseMessage = Message.builder()
+                    .content(session.getDocumentContent())
+                    .characterIds(session.getCharacterIds())
+                    .editors(session.getEditors())
+                    .build();
             return responseMessage;
-        }
-        finally{
+        } finally {
             lock.unlock();
         }
     }
 
-    public Message updateCursors( String sessionId, Vector<User> editors) throws Exception{
+    public Message updateCursors(String sessionId, Vector<User> editors) throws Exception {
         lock.lock();
-        try{
-        Session session=activeSessions.get(sessionId);
-        session.setEditors(editors);
-        Message message=Message.builder()
-        .content(session.getDocumentContent())
-        .characterIds(session.getCharacterIds()).editors(session.getEditors())
-        .viewers(session.getViewers())
-        .build();
-        return message;
-        }
-        finally{
+        try {
+            Session session = activeSessions.get(sessionId);
+            session.setEditors(editors);
+            Message message = Message.builder()
+                    .content(session.getDocumentContent())
+                    .characterIds(session.getCharacterIds()).editors(session.getEditors())
+                    .viewers(session.getViewers())
+                    .build();
+            return message;
+        } finally {
             lock.unlock();
         }
     }
@@ -125,6 +143,7 @@ public class SessionService {
         Session s = activeSessions.get(sessionId);
         return s.getEditors();
     }
+
     public Vector<User> getViewers(String sessionId) {
         Session s = activeSessions.get(sessionId);
         return s.getViewers();
@@ -137,18 +156,18 @@ public class SessionService {
             if (session == null) {
                 throw new Exception("Session not found: " + sessionId);
             }
-            
+
             boolean isEditor = session.isEditor(user);
             if (!isEditor) {
                 throw new Exception("User is not an editor in this session");
             }
-            
+
             boolean success = session.getDocument().undo(String.valueOf(user.getId()));
-            
+
             if (!success) {
                 throw new Exception("Nothing to undo");
             }
-            
+
             Message responseMessage = Message.builder()
                     .content(session.getDocumentContent())
                     .characterIds(session.getCharacterIds())
@@ -168,18 +187,18 @@ public class SessionService {
             if (session == null) {
                 throw new Exception("Session not found: " + sessionId);
             }
-            
+
             boolean isEditor = session.isEditor(user);
             if (!isEditor) {
                 throw new Exception("User is not an editor in this session");
             }
-            
+
             boolean success = session.getDocument().redo(String.valueOf(user.getId()));
-            
+
             if (!success) {
                 throw new Exception("Nothing to redo");
             }
-            
+
             Message responseMessage = Message.builder()
                     .content(session.getDocumentContent())
                     .characterIds(session.getCharacterIds())

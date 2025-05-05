@@ -533,22 +533,7 @@ const importButton = document.getElementById("import-button");
 const importFile = document.getElementById("import-file");
 const exportButton = document.getElementById("export-button");
 
-// if (importButton && importFile) {
-//   importButton.addEventListener("click", () => importFile.click());
-//   importFile.addEventListener("change", (event) => {
-//     const file = event.target.files[0];
-//     if (!file) return;
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       editor.value = e.target.result;
-//       // Optionally, send the imported content to the server as a batch insert
-//       // You may want to clear the document and insert all text as new
-//       // For now, just update the local editor
-//     };
-//     reader.readAsText(file);
-//   });
-// }
-
+// Update the paste handler
 if (importButton && importFile) {
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", (event) => {
@@ -559,47 +544,40 @@ if (importButton && importFile) {
       const text = e.target.result;
       // clear local editor
       editor.value = "";
-      // send each character as an individual operation
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        // update local view immediately (optional)
-        editor.value += ch;
-        // send each character insertion to server
-        const parentId = i === 0 ? -1 : characterIds[i - 1] || -1;
-        stompClient.send(
-          `/app/session/${sessionId}/edit`,
-          {},
-          JSON.stringify({
-            sender: me,
-            operation: {
-              type: "INSERT",
-              parentId: parentId,
-              ch: ch,
-              userId: me.id,
-              timestamp: Date.now(),
-            },
-          })
-        );
-      }
+
+      // Instead of sending each character as an individual operation,
+      // send the entire text as one operation
+      const parentId = -1;
+      const characterIdList = text.split("").map((_) => `${me.id}:${charIds++}`);
+
+      stompClient.send(
+        `/app/session/${sessionId}/edit`,
+        {},
+        JSON.stringify({
+          sender: me,
+          operation: {
+            type: "INSERT",
+            parentId: parentId,
+            userId: me.id,
+            timestamp: Date.now(),
+          },
+          text: text,
+          characterIdList: characterIdList
+        })
+      );
+
+      // Update local editor right away for responsiveness
+      editor.value = text;
+
+      // Update our character ID array 
+      characterIds = [...characterIdList];
+
+      // Update cursor position
+      me.cursorPosition = text.length;
     };
     reader.readAsText(file);
   });
 }
-
-// if (exportButton) {
-//   exportButton.addEventListener("click", () => {
-//     const text = editor.value;
-//     const blob = new Blob([text], { type: "text/plain" });
-//     const url = URL.createObjectURL(blob);
-//     const a = document.createElement("a");
-//     a.href = url;
-//     a.download = "document.txt";
-//     document.body.appendChild(a);
-//     a.click();
-//     document.body.removeChild(a);
-//     URL.revokeObjectURL(url);
-//   });
-// }
 
 if (exportButton) {
   exportButton.addEventListener("click", () => {

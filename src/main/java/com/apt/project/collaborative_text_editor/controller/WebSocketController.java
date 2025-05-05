@@ -73,7 +73,7 @@ public class WebSocketController {
                 .viewers(session.getViewers())
                 .editors(session.getEditors())
                 .content(session.getDocumentContent())
-                .characterIds(session.getCharacterIds()) 
+                .characterIds(session.getCharacterIds())
                 .build();
 
             messagingTemplate.convertAndSend("/topic/session/"+session.getId(), responseMessage);

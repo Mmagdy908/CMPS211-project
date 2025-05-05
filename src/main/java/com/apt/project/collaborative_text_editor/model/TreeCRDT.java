@@ -188,9 +188,16 @@ public class TreeCRDT implements CRDT {
 
         List<Operation> operations = new ArrayList<>();
         String currentParentId = parentId;
+        List<CRDTNode> insertedNodes = new ArrayList<>();
 
         lock.lock();
         try {
+            // Create a single text operation for history tracking
+            long timestamp = System.currentTimeMillis();
+            String operationId = "textop-" + userId + "-" + timestamp;
+            Operation textOperation = new Operation(Operation.Type.INSERT, parentId, text, userId, timestamp, operationId);
+
+            // Insert each character but only add the text operation to history once
             for (int i = 0; i < text.length(); i++) {
                 // Use provided character ID if available, otherwise generate one
                 String characterId = (characterIds != null && i < characterIds.size())
@@ -200,18 +207,58 @@ public class TreeCRDT implements CRDT {
                 debug("insertText", "Inserting character '" + text.charAt(i)
                         + "' at position " + i + " with ID: " + characterId);
 
-                Operation op = insert(currentParentId, text.charAt(i), userId, characterId);
-                operations.add(op);
-                currentParentId = op.getCharacterId();
+                CRDTNode parent = "-1".equals(currentParentId) ? root : findNodeById(currentParentId);
+                if (parent == null) {
+                    debug("insertText", "WARNING: Parent node not found for ID: " + currentParentId + ". Using root instead.");
+                    parent = root;
+                }
 
+                CharacterID id = new CharacterID(userId, timestamp + i, characterId);
+                CRDTNode node = new CRDTNode(id, text.charAt(i));
+
+                parent.children.add(node);
+                idNodeMap.put(node.nodeId, node);
+                insertedNodes.add(node);
+
+                // Create individual operations for returning to caller, but don't add to history
+                operations.add(new Operation(Operation.Type.INSERT, currentParentId, text.charAt(i), userId, timestamp + i, characterId));
+
+                currentParentId = node.nodeId;
                 debug("insertText", "Next parent ID will be: " + currentParentId);
             }
-            debug("insertText", "Completed text insertion, created " + operations.size() + " operations");
+
+            // Add a single operation to history for the entire text
+            addTextOperationToHistory(userId, textOperation, insertedNodes);
+
+            debug("insertText", "Completed text insertion, created 1 text operation for " + text.length() + " characters");
             return operations;
         } finally {
             lock.unlock();
         }
     }
+
+    // Add this new method to store text operation with its inserted nodes
+    private void addTextOperationToHistory(int userId, Operation textOperation, List<CRDTNode> insertedNodes) {
+        Deque<Operation> userHistory = history.computeIfAbsent(userId, k -> new ArrayDeque<>());
+        // Store the text operation along with the nodes in a custom map
+        textOperationNodes.put(textOperation.getOperationId(), insertedNodes);
+        userHistory.push(textOperation);
+
+        debug("addTextOperationToHistory", "Added text operation to history for userId: " + userId
+                + ", text length: " + textOperation.getTextString().length()
+                + ", history size: " + userHistory.size());
+
+        while (userHistory.size() > MAX_HISTORY) {
+            Operation removed = userHistory.removeLast();
+            debug("addTextOperationToHistory", "Removed oldest operation from history: " + removed);
+            if (removed.isTextOperation()) {
+                textOperationNodes.remove(removed.getOperationId());
+            }
+        }
+    }
+
+    // Add a field to track nodes for text operations
+    private final Map<String, List<CRDTNode>> textOperationNodes = new ConcurrentHashMap<>();
 
     @Override
     public List<Operation> insertText(String parentId, String text, int userId) {
@@ -333,11 +380,23 @@ public class TreeCRDT implements CRDT {
             }
 
             Operation op = ops.pop();
-            debug("undo", "Undoing operation: " + op.getType()
-                    + ", char: " + op.getText()
-                    + ", characterId: " + op.getCharacterId());
+            debug("undo", "Undoing operation: " + op.getType() + (op.isTextOperation()
+                    ? ", text length: " + op.getTextString().length()
+                    : ", char: " + op.getText() + ", characterId: " + op.getCharacterId()));
 
-            if (op.getType() == Operation.Type.INSERT) {
+            if (op.isTextOperation()) {
+                // Handle text operation undo
+                List<CRDTNode> nodes = textOperationNodes.get(op.getOperationId());
+                if (nodes != null) {
+                    for (CRDTNode node : nodes) {
+                        node.isDeleted = true;
+                        debug("undo", "Marked text node as deleted: " + node.nodeId);
+                    }
+                } else {
+                    debug("undo", "ERROR: Text operation nodes not found for ID: " + op.getOperationId());
+                }
+            } else if (op.getType() == Operation.Type.INSERT) {
+                // Handle single character insert
                 CRDTNode node = findNodeById(op.getCharacterId());
                 if (node != null) {
                     debug("undo", "Marking node as deleted: " + node.nodeId);
@@ -346,6 +405,7 @@ public class TreeCRDT implements CRDT {
                     debug("undo", "ERROR: Node not found for ID: " + op.getCharacterId());
                 }
             } else if (op.getType() == Operation.Type.DELETE) {
+                // Handle delete
                 CRDTNode node = findNodeById(op.getPosition());
                 if (node != null) {
                     debug("undo", "Unmarking node as deleted: " + node.nodeId);
@@ -377,19 +437,32 @@ public class TreeCRDT implements CRDT {
             }
 
             Operation op = redo.pop();
-            debug("redo", "Redoing operation: " + op.getType()
-                    + ", char: " + op.getText()
-                    + ", characterId: " + op.getCharacterId());
+            debug("redo", "Redoing operation: " + op.getType() + (op.isTextOperation()
+                    ? ", text length: " + op.getTextString().length()
+                    : ", char: " + op.getText() + ", characterId: " + op.getCharacterId()));
 
-            if (op.getType() == Operation.Type.INSERT) {
+            if (op.isTextOperation()) {
+                // Handle text operation redo
+                List<CRDTNode> nodes = textOperationNodes.get(op.getOperationId());
+                if (nodes != null) {
+                    for (CRDTNode node : nodes) {
+                        node.isDeleted = false;
+                        debug("redo", "Unmarked text node as not deleted: " + node.nodeId);
+                    }
+                } else {
+                    debug("redo", "ERROR: Text operation nodes not found for ID: " + op.getOperationId());
+                }
+            } else if (op.getType() == Operation.Type.INSERT) {
+                // Handle single character insert
                 CRDTNode node = findNodeById(op.getCharacterId());
                 if (node != null) {
-                    debug("redo", "Unmarking node as deleted: " + node.nodeId);
+                    debug("redo", "Unmarking node as not deleted: " + node.nodeId);
                     node.isDeleted = false;
                 } else {
                     debug("redo", "ERROR: Node not found for ID: " + op.getCharacterId());
                 }
             } else if (op.getType() == Operation.Type.DELETE) {
+                // Handle delete
                 CRDTNode node = findNodeById(op.getPosition());
                 if (node != null) {
                     debug("redo", "Marking node as deleted: " + node.nodeId);
