@@ -171,7 +171,7 @@ function updateDocument(newContent, newCharacterIds) {
 }
 
 function editDocument(event) {
-  const { inputType, data } = event;
+  let { inputType, data } = event;
   const selectionStart = editor.selectionStart;
   const parentId = selectionStart === 0 ? -1 : characterIds[selectionStart - 1];
   // const characterId = `${me.id}:${charIds++}`;
@@ -180,10 +180,13 @@ function editDocument(event) {
   console.log(characterIds);
   const selectionEnd = editor.selectionEnd;
   console.log("my current pos:", me.cursorPosition);
-  if (inputType === "insertText") {
+  if (inputType === "insertText" || inputType === "insertLineBreak") {
     const characterId = `${me.id}:${charIds++}`;
     characterIds.splice(selectionStart, 0, characterId);
     me.cursorPosition++;
+
+    if (inputType === "insertLineBreak") data = "\n";
+
     stompClient.send(
       `/app/session/${sessionId}/edit`,
       {},
