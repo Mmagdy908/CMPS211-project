@@ -139,7 +139,7 @@ function createUser(event) {
         return response.text();
       })
       .then((id) => {
-        me = { id, username };
+        me = { id: +id, username };
 
         console.log(`new user id: ${id}`);
         connect();
@@ -174,7 +174,7 @@ function editDocument(event) {
   const { inputType, data } = event;
   const selectionStart = editor.selectionStart;
   const parentId = selectionStart === 0 ? -1 : characterIds[selectionStart - 1];
-  const characterId = `${me.id}:${charIds++}`;
+  // const characterId = `${me.id}:${charIds++}`;
 
   console.log(selectionStart, parentId, data, content);
   console.log(characterIds);
@@ -183,6 +183,7 @@ function editDocument(event) {
   if (inputType === "insertText") {
     const characterId = `${me.id}:${charIds++}`;
     characterIds.splice(selectionStart, 0, characterId);
+    me.cursorPosition++;
     stompClient.send(
       `/app/session/${sessionId}/edit`,
       {},
@@ -192,13 +193,14 @@ function editDocument(event) {
           type: "INSERT",
           parentId,
           ch: data,
-          userId: 1,
+          userId: +me.id,
           characterId,
           timestamp: Date.now(),
         },
       })
     );
   } else if (inputType === "insertFromPaste") {
+    me.cursorPosition += data.length;
     const characterIdList = data.split("").map((_) => `${me.id}:${charIds++}`);
     characterIds.splice(selectionStart, 0, ...characterIdList);
     stompClient.send(
@@ -209,15 +211,16 @@ function editDocument(event) {
         operation: {
           type: "INSERT",
           parentId,
-          ch: data,
-          userId: 1,
-          characterId,
+          userId: +me.id,
           timestamp: Date.now(),
         },
+        text: data,
+        characterIdList,
       })
     );
   } else if (inputType === "deleteContentBackward") {
     if (selectionStart === 0) return;
+    me.cursorPosition--;
     characterIds.splice(selectionStart - 1, 1);
 
     stompClient.send(
@@ -268,6 +271,8 @@ function onMessageReceived(payload) {
     console.log(`User: ${me.id} created session: ${sessionId}`);
     me.cursorPosition = 0;
   } else if (message.type === "JOIN") {
+    console.log(`sender ${message.sender.id}, me:${me.id}`);
+
     if (message.sender.id === me.id) {
       sessionId = message.sessionId;
 
@@ -293,11 +298,9 @@ function onMessageReceived(payload) {
     updateCursorPosition();
     console.log(`Updating Cursors...`);
   } else if (message.type === "UPDATE") {
-    if (message.sender.id === me.id) return;
-
     updateDocument(message.content, message.characterIds);
     editors = message.editors;
-    updateCursorPosition();
+    if (message.sender.id !== me.id) updateCursorPosition();
     console.log("Editors", editors);
     // updateCursorPosition();
     // console.log(`Updating Document...`);
@@ -465,8 +468,6 @@ function editCursorPosition(event) {
   // console.log(editors);
   const user = editors.find((user) => user.id == me.id);
   if (user) {
-    console.log("jeeee");
-
     me.cursorPosition = user.cursorPosition = start;
     stompClient.send(
       `/app/session/${sessionId}/update-cursor`,

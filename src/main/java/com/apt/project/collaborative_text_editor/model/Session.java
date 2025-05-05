@@ -76,17 +76,34 @@ public class Session {
         return viewers.stream().anyMatch(u -> u.getId()==(user.getId()));
     }
 
-    public void edit(Operation op,User sender){
-
-        document.applyOperation(op);
+    public void edit(Message message){
+        // insertCharacter(String parentId, Character ch, int userId, String characterId)
+        // document.insertCharacter(op.getPosition(), op.getText(), op.getuserId(), op.getCharacterId());
+        User sender=message.getSender();
+        int increment=1;
+        if(message.getText()==null)    {
+            document.applyOperation(message.getOperation());
+        }
+        else {
+            document.insertText(message.getOperation().getPosition(), message.getText(), sender.getId(),message.getCharacterIdList());
+            increment=message.getText().length();
+        }
     //    System.out.println("sender cursor before: " +sender.getCursorPosition());
-        
+
         for(int i=0;i<editors.size();i++){
-            int currentCursorPosition = editors.elementAt(i).getCursorPosition();
-            if(op.getType()==Type.INSERT && currentCursorPosition>=sender.getCursorPosition()){
-                editors.elementAt(i).setCursorPosition(currentCursorPosition+1);
+            if(editors.elementAt(i).getId()==sender.getId())  {
+                editors.elementAt(i).setCursorPosition(sender.getId());
+                continue;
             }
-            else if (op.getType()==Type.DELETE && currentCursorPosition>=sender.getCursorPosition() && sender.getCursorPosition()>0)
+            int currentCursorPosition = editors.elementAt(i).getCursorPosition();
+            if(message.getOperation().getType()==Type.INSERT && currentCursorPosition+increment>sender.getCursorPosition()){
+                // System.out.println("user: " +editors.elementAt(i).getUsername());
+                // System.out.println("user cursor before: " +editors.elementAt(i).getCursorPosition());
+                editors.elementAt(i).setCursorPosition(currentCursorPosition+increment);
+                // System.out.println("user cursor after: " +editors.elementAt(i).getCursorPosition());
+
+            }
+            else if (message.getOperation().getType()==Type.DELETE && currentCursorPosition>=sender.getCursorPosition() && sender.getCursorPosition()>0)
             {
                 // System.out.println("user: " +editors.elementAt(i).getUsername());
                 // System.out.println("user cursor before: " +editors.elementAt(i).getCursorPosition());

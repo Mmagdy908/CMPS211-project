@@ -128,9 +128,8 @@ public class WebSocketController {
         User user=message.getSender();
 
         try{
-            
             Message serviceMessage = sessionService
-                                    .editDocument(message.getOperation(),sessionId,message.getSender());
+                                    .editDocument(message,sessionId);
 
             Message responseMessage=Message.builder()
                                             .type(MessageType.UPDATE)
@@ -145,7 +144,6 @@ public class WebSocketController {
         }catch(Exception e){
             Message errorMessage=Message.builder().type(MessageType.ERROR).sender(user).error(e.getMessage()).build();
             // return errorMessage;
-            System.out.println("hekl");
             messagingTemplate.convertAndSend("/topic/session/"+sessionId , errorMessage);
 
         }

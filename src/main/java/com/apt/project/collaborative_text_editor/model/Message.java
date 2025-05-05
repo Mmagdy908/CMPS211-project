@@ -30,4 +30,6 @@ public class Message {
     private String code;
     //private List<String> activeUsers;
     private Integer cursorPosition;
+    private String text;
+    private List<String> characterIdList;
 }

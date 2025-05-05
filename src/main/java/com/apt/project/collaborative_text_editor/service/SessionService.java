@@ -72,18 +72,19 @@ public class SessionService {
 
 
 
-    public Message editDocument(Operation op, String sessionId, User sender) throws Exception{
+    public Message editDocument(Message message,String sessionId) throws Exception{
         lock.lock();
         try{
             Session session=activeSessions.get(sessionId);
            
            
-            session.edit(op,sender);
-            Message message=Message.builder()
+            session.edit(message);
+            
+            Message responseMessage=Message.builder()
             .content(session.getDocumentContent())
             .characterIds(session.getCharacterIds()).editors(session.getEditors())
             .build();
-            return message;
+            return responseMessage;
         }
         finally{
             lock.unlock();
@@ -91,6 +92,8 @@ public class SessionService {
     }
 
     public Message updateCursors( String sessionId, Vector<User> editors) throws Exception{
+        lock.lock();
+        try{
         Session session=activeSessions.get(sessionId);
         session.setEditors(editors);
         Message message=Message.builder()
@@ -99,6 +102,10 @@ public class SessionService {
         .viewers(session.getViewers())
         .build();
         return message;
+        }
+        finally{
+            lock.unlock();
+        }
     }
 
     public Session getSession(String sessionId) {

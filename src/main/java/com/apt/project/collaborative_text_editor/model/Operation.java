@@ -33,8 +33,7 @@ public class Operation implements Serializable {
         this.operationId = "op-" + UUID.randomUUID().toString();
     }
 
-    public Operation() {
-    }
+   
      // public Operation(Type type, String parentId, Character ch, int userId, long timestamp) {
     //     this(type, parentId, ch, userId, timestamp, null);
     // }
