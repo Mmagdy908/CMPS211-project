@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.apt.project.collaborative_text_editor.Utility;
+import com.apt.project.collaborative_text_editor.model.Document;
 import com.apt.project.collaborative_text_editor.model.Message;
 import com.apt.project.collaborative_text_editor.model.Operation;
 import com.apt.project.collaborative_text_editor.model.Session;
@@ -129,4 +130,65 @@ public class SessionService {
         return s.getViewers();
     }
 
+    public Message undoOperation(String sessionId, User user) throws Exception {
+        lock.lock();
+        try {
+            Session session = activeSessions.get(sessionId);
+            if (session == null) {
+                throw new Exception("Session not found: " + sessionId);
+            }
+            
+            boolean isEditor = session.isEditor(user);
+            if (!isEditor) {
+                throw new Exception("User is not an editor in this session");
+            }
+            
+            boolean success = session.getDocument().undo(String.valueOf(user.getId()));
+            
+            if (!success) {
+                throw new Exception("Nothing to undo");
+            }
+            
+            Message responseMessage = Message.builder()
+                    .content(session.getDocumentContent())
+                    .characterIds(session.getCharacterIds())
+                    .editors(session.getEditors())
+                    .viewers(session.getViewers())
+                    .build();
+            return responseMessage;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Message redoOperation(String sessionId, User user) throws Exception {
+        lock.lock();
+        try {
+            Session session = activeSessions.get(sessionId);
+            if (session == null) {
+                throw new Exception("Session not found: " + sessionId);
+            }
+            
+            boolean isEditor = session.isEditor(user);
+            if (!isEditor) {
+                throw new Exception("User is not an editor in this session");
+            }
+            
+            boolean success = session.getDocument().redo(String.valueOf(user.getId()));
+            
+            if (!success) {
+                throw new Exception("Nothing to redo");
+            }
+            
+            Message responseMessage = Message.builder()
+                    .content(session.getDocumentContent())
+                    .characterIds(session.getCharacterIds())
+                    .editors(session.getEditors())
+                    .viewers(session.getViewers())
+                    .build();
+            return responseMessage;
+        } finally {
+            lock.unlock();
+        }
+    }
 }

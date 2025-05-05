@@ -1,7 +1,7 @@
 "use strict";
 
-const URL = "http://192.168.1.4:3000";
-// const URL = "http://localhost:3000";
+//const URL = "http://192.168.1.4:3000";
+const URL = "http://localhost:3000";
 var usernamePage = document.querySelector("#username-page");
 var chatPage = document.querySelector("#doc-page");
 var createBtn = document.querySelector(".create");
@@ -426,15 +426,39 @@ function renderUserList() {
 // }
 
 undoButton.addEventListener("click", () => {
-  fetch(`${URL}/api/documents/${sessionId}/undo?userId=${userId}`, {
-    method: "POST",
-  });
+  if (!sessionId || !stompClient) {
+    console.log("No active session or connection");
+    return;
+  }
+
+  stompClient.send(
+    `/app/session/${sessionId}/undo`,
+    {},
+    JSON.stringify({
+      sender: me,
+      type: "UNDO"  // This matches the enum value we just added
+    })
+  );
+
+  console.log("Sent undo request");
 });
 
 redoButton.addEventListener("click", () => {
-  fetch(`${URL}/api/documents/${sessionId}/redo?userId=${userId}`, {
-    method: "POST",
-  });
+  if (!sessionId || !stompClient) {
+    console.log("No active session or connection");
+    return;
+  }
+
+  stompClient.send(
+    `/app/session/${sessionId}/redo`,
+    {},
+    JSON.stringify({
+      sender: me,
+      type: "REDO"  // This matches the enum value we just added
+    })
+  );
+
+  console.log("Sent redo request");
 });
 
 function getAvatarColor(messageSender) {

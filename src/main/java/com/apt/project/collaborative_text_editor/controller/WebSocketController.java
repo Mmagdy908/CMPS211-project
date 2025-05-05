@@ -175,6 +175,58 @@ public class WebSocketController {
         }
     }
 
+    @MessageMapping("/session/{sessionId}/undo")
+    public void undoOperation(@RequestBody Message message, @DestinationVariable String sessionId) {
+        User user = message.getSender();
+        try {
+            Message serviceMessage = sessionService.undoOperation(sessionId, user);
+            
+            Message responseMessage = Message.builder()
+                    .type(MessageType.UPDATE)
+                    .sender(user)
+                    .content(serviceMessage.getContent())
+                    .characterIds(serviceMessage.getCharacterIds())
+                    .editors(serviceMessage.getEditors())
+                    .viewers(serviceMessage.getViewers())
+                    .build();
+                    
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, responseMessage);
+        } catch (Exception e) {
+            Message errorMessage = Message.builder()
+                    .type(MessageType.ERROR)
+                    .sender(user)
+                    .error(e.getMessage())
+                    .build();
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, errorMessage);
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/redo")
+    public void redoOperation(@RequestBody Message message, @DestinationVariable String sessionId) {
+        User user = message.getSender();
+        try {
+            Message serviceMessage = sessionService.redoOperation(sessionId, user);
+            
+            Message responseMessage = Message.builder()
+                    .type(MessageType.UPDATE)
+                    .sender(user)
+                    .content(serviceMessage.getContent())
+                    .characterIds(serviceMessage.getCharacterIds())
+                    .editors(serviceMessage.getEditors())
+                    .viewers(serviceMessage.getViewers())
+                    .build();
+                    
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, responseMessage);
+        } catch (Exception e) {
+            Message errorMessage = Message.builder()
+                    .type(MessageType.ERROR)
+                    .sender(user)
+                    .error(e.getMessage())
+                    .build();
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, errorMessage);
+        }
+    }
+
 }
     
 //========================================================================================================//
