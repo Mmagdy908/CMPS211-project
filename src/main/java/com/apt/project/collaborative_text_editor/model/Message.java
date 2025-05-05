@@ -28,6 +28,7 @@ public class Message {
     private String editorCode;
     private String viewerCode;
     private String code;
+    private Boolean isEditor;
     //private List<String> activeUsers;
     private Integer cursorPosition;
     private String text;

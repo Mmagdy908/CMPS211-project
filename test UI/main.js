@@ -108,6 +108,7 @@ function joinSession(event) {
     JSON.stringify({
       sender: me,
       code: code,
+
     })
   );
 
@@ -260,6 +261,7 @@ function onMessageReceived(payload) {
   var message = JSON.parse(payload.body);
 
   var messageElement = document.createElement("li");
+  
 
   if (message.type == "CREATE") {
     sessionId = message.sessionId;
@@ -279,7 +281,7 @@ function onMessageReceived(payload) {
     if (message.sender.id === me.id) {
       sessionId = message.sessionId;
 
-      if (message.isViewer) {
+      if (!message.isEditor) {
         editor.setAttribute("disabled", "disabled");
       }
 
